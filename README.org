@@ -1,0 +1,74 @@
+#+TITLE: Edie
+
+/An Emacs-based desktop environment./
+
+Current status:
+
+#+CAPTION: Current status
+#+ATTR: :width 640px
+[[./current.png]]
+
+Edie aspires to be give you, dear Emacs user, a set of utilities resembling what youwhat you would get if you used a full blown desktop environment like GNOME, KDE, Xfce, etc, while letting you control all of what it provides from the comfort of Emacs itself.
+
+** Components
+The following components are currently present in this repository:
+
+*** Edie WM
+This is a wrapper around Openbox (or any other EWMH-compliant window manager, but I haven't tested that).
+
+*** Edie Wallpaper
+A simple library to rotate all the backgrounds in a directory.
+
+*** Edie Redshift
+A simple library to start Redshift, for color temperature control.
+
+** Planned Components
+Watch this space.
+
+** Requirements
+Edie is quite unstable stll, so if you don't have a reasonable grasp on Emacs Lisp (as I don't, but I'm making an exception for myself here), you should not use it. Unfortunately, I don't have enough time to help you set it up, or to help you debug any issues that don't affect me. *You have been warned!*
+
+That said, feel free to go to Discussions and ask there, if you experience any issues.
+
+Now that that's out of the way, here is what you'll need, depending on which parts you are planning to use:
+
+- Openbox (for Edie WM)
+- XELB (for Edie WM)
+- Nitrogen (for Edie Wallpaper)
+
+**** Suggestions
+- Picom (for ricing)
+
+** Installation
+Edie is not any of the *ELPAs, therefor the only way to try it right now is to clone this repository. So...
+
+1. ...let's assume you did that:
+   #+BEGIN_EXAMPLE
+   $ git clone https://github.com/dleal-mojotech/edie.git my-awesome-local-dir
+   #+END_EXAMPLE
+
+2. Now, you'll need to add the following to your emacs init file:
+   #+BEGIN_EXAMPLE
+   (add-to-list 'load-path "/path/to/my-awesome-local-dir")
+   (require 'edie)
+   #+END_EXAMPLE
+
+** Configuration
+Customize the group =edie= to see all the options that are currently available.
+
+** Contributing
+I'm not accepting PRs at the moment, but feel free to open issues, even though I can't guarantee I'll get to them any time soon.
+
+** Epilogue
+#+BEGIN_QUOTE
+[Paul] was greatly distressed to see that [Athens] was full of idols. So he reasoned in the synagogue with both Jews and God-fearing Greeks, as well as in the marketplace day by day with those who happened to be there. A group of Epicurean and Stoic philosophers began to debate with him. Some of them asked, “What is this babbler trying to say?” Others remarked, “He seems to be advocating foreign gods.” They said this because Paul was preaching the good news about Jesus and the resurrection. Then they took him and brought him to a meeting of the Areopagus, where they said to him, “May we know what this new teaching is that you are presenting? You are bringing some strange ideas to our ears, and we would like to know what they mean.” (All the Athenians and the foreigners who lived there spent their time doing nothing but talking about and listening to the latest ideas.)
+
+Paul then stood up in the meeting of the Areopagus and said: “People of Athens! I see that in every way you are very religious. For as I walked around and looked carefully at your objects of worship, I even found an altar with this inscription: to an unknown god. So you are ignorant of the very thing you worship—and this is what I am going to proclaim to you.
+
+“The God who made the world and everything in it is the Lord of heaven and earth and does not live in temples built by human hands. And he is not served by human hands, as if he needed anything. Rather, he himself gives everyone life and breath and everything else. From one man he made all the nations, that they should inhabit the whole earth; and he marked out their appointed times in history and the boundaries of their lands. God did this so that they would seek him and perhaps reach out for him and find him, though he is not far from any one of us. ‘For in him we live and move and have our being.’ As some of your own poets have said, ‘We are his offspring.’
+
+“Therefore since we are God’s offspring, we should not think that the divine being is like gold or silver or stone—an image made by human design and skill. In the past God overlooked such ignorance, but now he commands all people everywhere to repent. For he has set a day when he will judge the world with justice by the man he has appointed. He has given proof of this to everyone by raising him from the dead.”
+
+When they heard about the resurrection of the dead, some of them sneered, but others said, “We want to hear you again on this subject.”
+#+END_QUOTE
+/The Holy Bible/ (New International Version), the book of /Acts of the Apostles,/ chapter /17/, verses /16/ through /32/.

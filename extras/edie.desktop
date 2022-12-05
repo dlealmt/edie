@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Edie
+Comment=Emacs-based desktop environment
+Exec=emacs
+Type=Application
+Keywords=wm;tiling
