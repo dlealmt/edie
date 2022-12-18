@@ -229,11 +229,11 @@ switch to."
   (interactive)
   (funcall edie-wm-window-close-function (or window (edie-wm-current-window))))
 
-(defun edie-wm-window-to-desktop ()
-  "Send the current window to another desktop."
-  (interactive)
-  (let ((window (edie-wm-current-window)))
-    (edie-wm-window-update window (list :desktop (edie-wm-select-desktop)))))
+(defun edie-wm-window-to-desktop (desktop &optional window)
+  "Send WINDOW to DESKTOP."
+  (interactive (list (edie-wm-select-desktop)))
+  (let ((window (or window (edie-wm-current-window))))
+    (edie-wm-window-update window (list :desktop desktop))))
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
