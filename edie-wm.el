@@ -60,7 +60,7 @@
 
 (defcustom edie-wm-default-desktop-list '("default")
   "A list of desktop names."
-  :type '(list string))
+  :type '(repeat string))
 
 (defcustom edie-wm-desktop-padding '(:left 0 :top 0 :bottom 0 :right 0)
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
