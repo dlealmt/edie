@@ -31,7 +31,7 @@
 (require 'pcase)
 
 (defvar edie-wm-current-window-id-function nil)
-(defvar edie-wm-window-update-function nil)
+(defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-close-function nil)
 (defvar edie-wm-window-list-function nil)
 
@@ -86,10 +86,10 @@ manager configuration."
          (custom-set-default var val)
          (if (> val 0)
              (progn
-               (add-function :filter-args edie-wm-window-update-function #'edie-wm--write-borders)
-               (add-function :filter-return edie-wm-window-update-function #'edie-wm--read-borders))
-           (remove-function edie-wm-window-update-function #'edie-wm--write-borders)
-           (remove-function edie-wm-window-update-function #'edie-wm--read-borders))))
+               (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
+               (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders))
+           (remove-function edie-wm-update-window-function #'edie-wm--write-borders)
+           (remove-function edie-wm-update-window-function #'edie-wm--read-borders))))
 
 (defcustom edie-wm-window-border-active-color "#fe8019"
   "The color of the active window border.
@@ -233,7 +233,7 @@ switch to."
   "Send WINDOW to DESKTOP."
   (interactive (list (edie-wm-select-desktop)))
   (let ((window (or window (edie-wm-current-window))))
-    (edie-wm-window-update window (list :desktop desktop))))
+    (edie-wm-update-window window (list :desktop desktop))))
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
@@ -310,10 +310,10 @@ Return nil or the list of windows that match the filters."
          (or (not ftop) (equal ftop wtop))
          (or (not fwidth) (equal fwidth wwidth)))))
 
-(defun edie-wm-window-update (window plist)
+(defun edie-wm-update-window (window plist)
   (pcase-let (((seq 'window wid) window))
     (setf (map-elt edie-wm--window-list wid)
-          (funcall edie-wm-window-update-function
+          (funcall edie-wm-update-window-function
                    window
                    (map-merge 'plist plist (edie-wm-geometry plist))))))
 
@@ -447,7 +447,7 @@ Return nil or the list of windows that match the filters."
       (funcall edie-wm--apply-rules-function rules window))))
 
 (defun edie-wm--apply-rules-1 (rules window)
-  (edie-wm-window-update window rules))
+  (edie-wm-update-window window rules))
 
 (defun edie-wm--find-rule (window)
   (seq-find (pcase-lambda (`(,filter . ,_))
@@ -508,7 +508,7 @@ Return nil or the list of windows that match the filters."
     (edie-wm-window-filter-list `(:desktop ,desktop-id ,@geom))))
 
 (defun edie-wm-tile-fit (tile &optional window)
-  (edie-wm-window-update (or window (edie-wm-current-window)) (edie-wm-tile--spec tile)))
+  (edie-wm-update-window (or window (edie-wm-current-window)) (edie-wm-tile--spec tile)))
 
 (defun edie-wm-tile--geometries ()
   (map-apply (lambda (k v) `(,k . ,(edie-wm-geometry v))) edie-wm-tile-alist))
