@@ -30,7 +30,6 @@
 (require 'map)
 (require 'pcase)
 
-(defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-close-function nil)
 (defvar edie-wm-window-list-function nil)
@@ -148,12 +147,6 @@ will be applied to windows matched by FILTERS.")
 
     (edie-wm-reset-window-list)
 
-    (setq edie-wm-history--history nil)
-    (edie-wm-history--push-window (funcall edie-wm-current-window-function))
-    (add-function :before-until
-                  edie-wm-current-window-id-function
-                  #'edie-wm-history--current-window-id)
-
     (dolist (w (edie-wm-window-list))
       (edie-wm--apply-rules w))
 
@@ -241,7 +234,7 @@ switch to."
 
 (defun edie-wm--current-window-1 ()
   "Default implementation for `edie-wm-current-window'."
-  (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
+  (car (edie-wm-window-list)))
 
 (defun edie-wm-window (filters &optional window)
   (pcase-let (((seq 'window (and fwid (pred identity))) window))
@@ -361,7 +354,9 @@ Return nil or the list of windows that match the filters."
   (funcall edie-wm-on-window-focus-function wid))
 
 (defun edie-wm--on-window-focus-1 (wid)
-  (edie-wm-history--push-window (alist-get wid (edie-wm-window-alist))))
+  (let ((window (alist-get wid (edie-wm-window-alist))))
+    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
+    (setf (alist-get wid edie-wm--window-list) window)))
 
 (defun edie-wm-on-window-add (window)
   (funcall edie-wm-on-window-add-function window))
@@ -374,8 +369,7 @@ Return nil or the list of windows that match the filters."
   (funcall edie-wm-on-window-remove-function wid))
 
 (defun edie-wm--on-window-remove-1 (wid)
-  (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-  (setq edie-wm-history--history (delq wid edie-wm-history--history)))
+  (setf (alist-get wid edie-wm--window-list nil 'remove) nil))
 
 (defun edie-wm-on-window-update (wid property value)
   (funcall edie-wm-on-window-update-function wid property value))
@@ -454,24 +448,6 @@ Return nil or the list of windows that match the filters."
               (edie-wm-window-filter-match-p filter window))
             edie-wm-rules-alist))
 
-(defvar edie-wm-history--history nil)
-
-(defun edie-wm-history-list (&optional windows)
-  (thread-last
-    (or windows (edie-wm-window-list))
-    (mapcar (pcase-lambda ((seq 'window wid)) wid))
-    (seq-intersection edie-wm-history--history)
-    (seq-map (lambda (wid) (alist-get wid (edie-wm-window-alist))))))
-
-(defun edie-wm-history--current-window-id ()
-  (car edie-wm-history--history))
-
-(defun edie-wm-history--push-window (window)
-  (pcase-let* (((seq 'window wid) window)
-               (hist (delq wid edie-wm-history--history)))
-    (when (not (eq (car hist) wid))
-      (setq edie-wm-history--history (push wid hist)))))
-
 (cl-defun edie-wm-tile-maybe-tile ((rules window))
   (list (if-let ((tile (map-elt rules :tile)))
             (map-merge 'plist rules (edie-wm-tile--spec tile))
@@ -482,14 +458,13 @@ Return nil or the list of windows that match the filters."
   (if (eq (edie-wm-tile-current-tile) tile)
       (when-let ((window (thread-last
                            (edie-wm-tile-window-list (edie-wm-current-desktop) tile)
-                           (edie-wm-history-list)
                            (cadr))))
         (edie-wm-focus-window window))
     (edie-wm-tile-focus-tile tile)))
 
 (defun edie-wm-tile-focus-tile (tile)
   (let* ((desktop (edie-wm-current-desktop)))
-    (when-let ((window (car (edie-wm-history-list (edie-wm-tile-window-list desktop tile)))))
+    (when-let ((window (car (edie-wm-tile-window-list desktop tile))))
       (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
