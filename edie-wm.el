@@ -200,7 +200,7 @@ switch to."
   `(desktop (:name ,name) ,id))
 
 (defalias 'edie-wm-window-make #'edie-wm-x11-window-make)
-(defalias 'edie-wm-window-focus #'edie-wm-x11-window-focus)
+(defalias 'edie-wm-focus-window #'edie-wm-x11-window-focus)
 
 (defun edie-wm-window-id (window)
   "Return the ID of WINDOW."
@@ -484,13 +484,13 @@ Return nil or the list of windows that match the filters."
                            (edie-wm-tile-window-list (edie-wm-current-desktop) tile)
                            (edie-wm-history-list)
                            (cadr))))
-        (edie-wm-window-focus window))
+        (edie-wm-focus-window window))
     (edie-wm-tile-focus-tile tile)))
 
 (defun edie-wm-tile-focus-tile (tile)
   (let* ((desktop (edie-wm-current-desktop)))
     (when-let ((window (car (edie-wm-history-list (edie-wm-tile-window-list desktop tile)))))
-      (edie-wm-window-focus window))))
+      (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
   (edie-wm-tile-window-tile (edie-wm-current-window)))
