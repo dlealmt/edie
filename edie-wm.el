@@ -58,7 +58,7 @@
   :type '(plist :keyword-type (choice (const :left) (const :top) (const :width) (const :right))
                 :value-type edie-wm-unit))
 
-(defcustom edie-wm-default-dekstop-list '("default")
+(defcustom edie-wm-default-desktop-list '("default")
   "A list of desktop names."
   :type '(list string))
 
