@@ -236,14 +236,8 @@ switch to."
   "Default implementation for `edie-wm-current-window'."
   (car (edie-wm-window-list)))
 
-(defun edie-wm-window (filters &optional window)
-  (pcase-let (((seq 'window (and fwid (pred identity))) window))
-    (if (and window (edie-wm-window-filter-match-p filters window))
-        window
-      (catch 'found
-        (dolist (w (edie-wm-window-list))
-          (when (edie-wm-window-filter-match-p filters w)
-            (throw 'found w)))))))
+(defun edie-wm-window (filters)
+  (seq-find (lambda (wnd) (edie-wm-window-filter-match-p filters wnd)) (edie-wm-window-list)))
 
 (defun edie-wm-window-alist ()
   "An alist of windows where the keys are the window ids."
