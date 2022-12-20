@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Edie (Debug)
+Comment=Emacs-based desktop environment
+Exec=emacs --debug-init
+Type=Application
+Keywords=wm;tiling
