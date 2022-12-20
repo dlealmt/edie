@@ -350,16 +350,19 @@ Return nil or the list of windows that match the filters."
   (edie-match wid (pred integerp))
 
   (edie-check
-    :assert-before (alist-get wid (edie-wm-window-alist))
-    :after (edie-match (alist-get wid (edie-wm-window-alist))
-             `(,(pred (eq wid)) . (window ,(pred (eq wid)) ,_)))
+    :assert-before (or (= wid 0) (alist-get wid (edie-wm-window-alist)))
+    :after (if (= wid 0)
+               (edie-match (memq wid (map-keys (edie-wm-window-alist))) (pred null))
+             (edie-match (car (edie-wm-window-alist))
+               `(,(pred (eq wid)) . (window ,(pred (eq wid)) ,_))))
 
     (funcall edie-wm-on-window-focus-function wid)))
 
 (defun edie-wm--on-window-focus-1 (wid)
-  (let ((window (alist-get wid (edie-wm-window-alist))))
-    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-    (setf (alist-get wid edie-wm--window-list) window)))
+  (unless (= wid 0)
+    (let ((window (alist-get wid (edie-wm-window-alist))))
+      (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
+      (setf (alist-get wid edie-wm--window-list) window))))
 
 (defun edie-wm-on-window-add (window)
   (pcase-let ((`(window ,wid) window))

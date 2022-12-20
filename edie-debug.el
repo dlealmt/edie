@@ -43,9 +43,14 @@
 (defmacro edie-check (&rest args)
   (declare (indent defun))
 
-  (pcase-let (((map :assert-before :assert-after :before :after) args)
-              (body (thread-first args (map-delete :before) (map-delete :after)))
-              (retval (make-symbol "retval")))
+  (pcase-let* (((map :assert-before :assert-after :before :after) args)
+               (body (thread-first
+                       args
+                       (map-delete :before)
+                       (map-delete :assert-before)
+                       (map-delete :assert-after)
+                       (map-delete :after)))
+               (retval (make-symbol "retval")))
     (if edie-debug
         `(progn
            ,before
