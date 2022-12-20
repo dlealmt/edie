@@ -341,17 +341,17 @@ Return nil or the list of windows that match the filters."
   (edie-match wid (pred integerp))
 
   (edie-check
-    :assert-before (or (= wid 0) (alist-get wid (edie-wm-window-alist)))
+    :assert-before (or (= wid 0) (alist-get wid edie-wm--window-list))
     :after (if (= wid 0)
-               (edie-match (memq wid (map-keys (edie-wm-window-alist))) (pred null))
-             (edie-match (car (edie-wm-window-alist))
+               (edie-match (memq wid (map-keys edie-wm--window-list)) (pred null))
+             (edie-match (car edie-wm--window-list)
                `(,(pred (eq wid)) . (window ,(pred (eq wid)) ,_))))
 
     (funcall edie-wm-on-window-focus-function wid)))
 
 (defun edie-wm--on-window-focus-1 (wid)
   (unless (= wid 0)
-    (let ((window (alist-get wid (edie-wm-window-alist))))
+    (let ((window (alist-get wid edie-wm--window-list)))
       (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
       (setf (alist-get wid edie-wm--window-list) window))))
 
@@ -360,8 +360,8 @@ Return nil or the list of windows that match the filters."
     (edie-match wid (pred integerp))
 
     (edie-check
-      :assert-before (null (alist-get wid (edie-wm-window-alist)))
-      :assert-after (alist-get wid (edie-wm-window-alist))
+      :assert-before (null (alist-get wid edie-wm--window-list))
+      :assert-after (alist-get wid edie-wm--window-list)
 
       (funcall edie-wm-on-window-add-function window))))
 
@@ -372,12 +372,12 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-window-remove (wid)
   (edie-match wid (pred integerp))
 
-  (let ((window (alist-get wid (edie-wm-window-alist))))
+  (let ((window (alist-get wid edie-wm--window-list)))
     (edie-match window (seq 'window &rest _))
 
     (edie-check
-      :assert-before (alist-get wid (edie-wm-window-alist))
-      :assert-after (null (alist-get wid (edie-wm-window-alist)))
+      :assert-before (alist-get wid edie-wm--window-list)
+      :assert-after (null (alist-get wid edie-wm--window-list))
 
       (funcall edie-wm-on-window-remove-function wid))))
 
@@ -388,8 +388,8 @@ Return nil or the list of windows that match the filters."
   (edie-match wid (pred integerp))
 
   (edie-check
-    :assert-before (alist-get wid (edie-wm-window-alist))
-    :assert-after (alist-get wid (edie-wm-window-alist))
+    :assert-before (alist-get wid edie-wm--window-list)
+    :assert-after (alist-get wid edie-wm--window-list)
 
     (funcall edie-wm-on-window-update-function wid property value)))
 
