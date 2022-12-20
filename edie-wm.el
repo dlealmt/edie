@@ -30,6 +30,7 @@
 (require 'map)
 (require 'pcase)
 
+(defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-close-function nil)
 (defvar edie-wm-window-list-function nil)
@@ -234,7 +235,7 @@ switch to."
 
 (defun edie-wm--current-window-1 ()
   "Default implementation for `edie-wm-current-window'."
-  (car (edie-wm-window-list)))
+  (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
 
 (defun edie-wm-window (filters)
   (seq-find (lambda (wnd) (edie-wm-window-filter-match-p filters wnd)) (edie-wm-window-list)))
