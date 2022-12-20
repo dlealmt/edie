@@ -29,6 +29,7 @@
 
 (require 'map)
 (require 'pcase)
+(require 'edie-debug)
 
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
@@ -346,7 +347,14 @@ Return nil or the list of windows that match the filters."
     (truncate size)))
 
 (defun edie-wm-on-window-focus (wid)
-  (funcall edie-wm-on-window-focus-function wid))
+  (edie-match wid (pred integerp))
+
+  (edie-check
+    :assert-before (alist-get wid (edie-wm-window-alist))
+    :after (edie-match (alist-get wid (edie-wm-window-alist))
+             `(,(pred (eq wid)) . (window ,(pred (eq wid)) ,_)))
+
+    (funcall edie-wm-on-window-focus-function wid)))
 
 (defun edie-wm--on-window-focus-1 (wid)
   (let ((window (alist-get wid (edie-wm-window-alist))))
@@ -354,20 +362,42 @@ Return nil or the list of windows that match the filters."
     (setf (alist-get wid edie-wm--window-list) window)))
 
 (defun edie-wm-on-window-add (window)
-  (funcall edie-wm-on-window-add-function window))
+  (pcase-let ((`(window ,wid) window))
+    (edie-match wid (pred integerp))
+
+    (edie-check
+      :assert-before (null (alist-get wid (edie-wm-window-alist)))
+      :assert-after (alist-get wid (edie-wm-window-alist))
+
+      (funcall edie-wm-on-window-add-function window))))
 
 (defun edie-wm--on-window-add-1 (window)
   (pcase-let (((seq 'window wid) window))
     (setf (map-elt edie-wm--window-list wid) window)))
 
 (defun edie-wm-on-window-remove (wid)
-  (funcall edie-wm-on-window-remove-function wid))
+  (edie-match wid (pred integerp))
+
+  (let ((window (alist-get wid (edie-wm-window-alist))))
+    (edie-match window (seq 'window &rest _))
+
+    (edie-check
+      :assert-before (alist-get wid (edie-wm-window-alist))
+      :assert-after (null (alist-get wid (edie-wm-window-alist)))
+
+      (funcall edie-wm-on-window-remove-function wid))))
 
 (defun edie-wm--on-window-remove-1 (wid)
   (setf (alist-get wid edie-wm--window-list nil 'remove) nil))
 
 (defun edie-wm-on-window-update (wid property value)
-  (funcall edie-wm-on-window-update-function wid property value))
+  (edie-match wid (pred integerp))
+
+  (edie-check
+    :assert-before (alist-get wid (edie-wm-window-alist))
+    :assert-after (alist-get wid (edie-wm-window-alist))
+
+    (funcall edie-wm-on-window-update-function wid property value)))
 
 (defun edie-wm--on-window-update-1 (wid property value)
   (let* ((window (alist-get wid edie-wm--window-list))
