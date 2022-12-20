@@ -136,18 +136,15 @@ will be applied to windows matched by FILTERS.")
   (when edie-wm-mode
     (let ((backend (intern (format "edie-wm-backend-%s" edie-wm-backend))))
       (require backend))
-    (edie-wm-backend-start :default-desktop-list edie-wm-default-desktop-list)
-
-    (edie-wm-reset-window-list)
 
     (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
     (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
     (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
     (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
-
     (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
+    (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
 
-    (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)))
+    (edie-wm-backend-start :default-desktop-list edie-wm-default-desktop-list)))
 
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
