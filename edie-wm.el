@@ -377,19 +377,20 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm--on-window-remove-1 (wid)
   (setf (alist-get wid edie-wm--window-list nil 'remove) nil))
 
-(defun edie-wm-on-window-update (wid property value)
+(defun edie-wm-on-window-update (wid changes)
   (edie-match wid (pred integerp))
+  (edie-match changes (pred plistp))
 
   (edie-check
     :assert-before (alist-get wid edie-wm--window-list)
     :assert-after (alist-get wid edie-wm--window-list)
 
-    (funcall edie-wm-on-window-update-function wid property value)))
+    (funcall edie-wm-on-window-update-function wid changes)))
 
-(defun edie-wm--on-window-update-1 (wid property value)
+(defun edie-wm--on-window-update-1 (wid changes)
   (let* ((window (alist-get wid edie-wm--window-list))
          (props (edie-wm-window-properties window)))
-    (setf props (plist-put props property value))))
+    (map-do (lambda (k v) (setf props (plist-put props k v))) changes)))
 
 (cl-defun edie-wm--write-borders ((window plist))
   (pcase-let* (((map (:left wnd-left)
