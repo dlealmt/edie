@@ -70,27 +70,14 @@
 
 (defcustom edie-wm-window-margins 0
   "The amount of whitespace, in pixels, surrounding each window."
-  :type 'edie-wm-unit
-  :set (lambda (var val)
-         (custom-set-default var val)
-         (if (> val 0)
-             (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
-           (remove-function edie-wm-geometry-function #'edie-wm--adjust-margins))))
+  :type 'edie-wm-unit)
 
 (defcustom edie-wm-window-border-width 0
   "The width of the border surrounding every window.
 
 This should be set to the same value that is set in the window
 manager configuration."
-  :type 'edie-wm-unit
-  :set (lambda (var val)
-         (custom-set-default var val)
-         (if (> val 0)
-             (progn
-               (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
-               (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders))
-           (remove-function edie-wm-update-window-function #'edie-wm--write-borders)
-           (remove-function edie-wm-update-window-function #'edie-wm--read-borders))))
+  :type 'edie-wm-unit)
 
 (defcustom edie-wm-window-border-active-color "#fe8019"
   "The color of the active window border.
@@ -148,6 +135,10 @@ will be applied to windows matched by FILTERS.")
     (edie-wm-backend-start :default-desktop-list edie-wm-default-desktop-list)
 
     (edie-wm-reset-window-list)
+
+    (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
+    (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
+    (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
 
     (dolist (w (edie-wm-window-list))
       (edie-wm--apply-rules w))
