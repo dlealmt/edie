@@ -424,9 +424,9 @@ Return nil or the list of windows that match the filters."
                 edie-wm-desktop-padding)
                ((map :left :top :width :height) workarea))
     `(:left ,(+ left p-left)
-       :top ,(+ top p-top)
-       :width ,(- width p-left p-right)
-       :height ,(- height p-top p-bot))))
+      :top ,(+ top p-top)
+      :width ,(- width p-left p-right)
+      :height ,(- height p-top p-bot))))
 
 (defun edie-wm--adjust-margins (plist)
   (if (eq (map-elt plist :workarea) 'screen)
