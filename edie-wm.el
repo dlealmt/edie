@@ -294,9 +294,8 @@ Return nil or the list of windows that match the filters."
   (funcall edie-wm-workarea-function))
 
 (defun edie-wm-screenarea ()
-  (flatten-tree (mapcar* #'list
-                         '(:left :top :width :height)
-                         (map-elt (car (display-monitor-attributes-list)) 'geometry))))
+  (seq-let (left top width height) (map-elt (car (display-monitor-attributes-list)) 'geometry)
+    `(:left ,left :top ,top :width ,width :height ,height)))
 
 (defun edie-wm-geometry (spec)
   (funcall edie-wm-geometry-function spec))
