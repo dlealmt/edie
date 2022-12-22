@@ -28,13 +28,6 @@
 
 ;;; Code:
 
-(require 'edie-bar)
-(require 'edie-redshift)
-(require 'edie-run)
-(require 'edie-wm)
-(require 'edie-wm-x11)
-(require 'edie-wallpaper)
-
 (defgroup edie nil
   "Settings related to Edie and its components.")
 
