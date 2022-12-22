@@ -6,6 +6,7 @@
 ;; Maintainer: David Leal <dleal@mojotech.com>
 ;; Created: 2022
 ;; Version: 0.1.0
+;; Homepage: https://github.com/dleal-mojotech/edie
 
 ;; This file is part of Edie.
 
