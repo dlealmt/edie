@@ -30,6 +30,8 @@
 
 ;;; Code:
 
+(require 'edie-debug)
+
 (defgroup edie nil
   "Settings related to Edie and its components."
   :group 'x)

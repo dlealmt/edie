@@ -28,7 +28,6 @@
 
 (require 'map)
 (require 'pcase)
-(require 'edie-debug)
 
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
