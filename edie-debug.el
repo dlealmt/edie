@@ -33,12 +33,13 @@
 
 (defvar edie-debug nil)
 
-(defmacro edie-match (name expval)
+(defmacro edie-match (expr expval)
+  "Checke if EXPR match the `pcase' pattern EXPVAL."
   (if edie-debug
-    `(pcase ,name
-       (,expval ,name)
-       (_ (signal 'assertion-failed (list ',name ,name ',expval))))
-    name))
+    `(pcase ,expr
+       (,expval ,expr)
+       (_ (signal 'assertion-failed (list ',expr ,expr ',expval))))
+    expr))
 
 (defmacro edie-check (&rest args)
   (declare (indent defun))
