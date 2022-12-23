@@ -58,6 +58,9 @@
   "Path to the directory where the images are stored."
   :type 'directory)
 
+(defvar edie-wallpaper--current-image-path nil)
+(defvar edie-wallpaper--timer nil)
+
 ;;;###autoload
 (define-minor-mode edie-wallpaper-mode
   "Toggle wallpaper image slideshow."
@@ -66,9 +69,6 @@
     (cancel-timer edie-wallpaper--timer))
   (when edie-wallpaper-mode
     (edie-wallpaper-next-image)))
-
-(defvar edie-wallpaper--current-image-path nil)
-(defvar edie-wallpaper--timer nil)
 
 (defun edie-wallpaper-next-image ()
   "Show a different wallpaper, picked at random.
