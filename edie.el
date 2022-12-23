@@ -1,4 +1,4 @@
-;;; edie.el --- An Emacs-based desktop environment -*- lexical-binding: t -*-
+;;; edie.el --- A desktop environment -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 David Leal
 
