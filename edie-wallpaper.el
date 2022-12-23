@@ -105,6 +105,7 @@ Show a new image afterwards."
       (edie-wallpaper-next-image))))
 
 (defun edie-wallpaper--image-list ()
+  "Build the the list of images in `edie-wallpaper-image-path'."
   (directory-files edie-wallpaper-image-path t "[[:alnum:]]$"))
 
 (provide 'edie-wallpaper)
