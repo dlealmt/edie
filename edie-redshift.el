@@ -23,10 +23,10 @@
 
 ;;; Commentary:
 
-;; Edie-Redshift is a very thin wrapper for the `redie-redshift' program, and as such
-;; requires `redie-redshift' to be installed.
+;; Edie-Redshift is a very thin wrapper for the `redshift' program, and as such
+;; requires `redshift' to be installed.
 
-;; Start by customizing `edie-redshift-latitude' and `edie-redshift-longitude'. Then
+;; Start by customizing `edie-redshift-latitude' and `edie-redshift-longitude'.  Then
 ;; start `edie-redshift-mode'.
 
 ;;; Code:
@@ -44,8 +44,8 @@
   "The longitude used to detemine when to change the color temperature."
   :type 'float)
 
-(defcustom edie-redshift-program "redie-redshift"
-  "The path to redie-redshift."
+(defcustom edie-redshift-program "redshift"
+  "The path to `redshift'."
   :type 'string)
 
 (defvar edie-redshift--process nil)
