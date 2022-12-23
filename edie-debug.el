@@ -1,4 +1,4 @@
-;;; edwin-debug.el --- Debug tools for edwin -*- lexical-binding: t -*-
+;;; edie-debug.el --- Debug tools for edwin -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 David Leal
 
@@ -31,7 +31,7 @@
 (require 'map)
 (require 'pcase)
 
-(defvar edie-debug t)
+(defvar edie-debug nil)
 
 (defmacro edie-match (name expval)
   (if edie-debug
