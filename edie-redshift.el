@@ -60,6 +60,7 @@
     (kill-process edie-redshift--process)))
 
 (defun edie-redshift--run ()
+  "Run Redshift."
   (start-process "edie-redshift" "*edie-redshift*"
                  edie-redshift-program
                  "-l" (format "%f:%f" edie-redshift-latitude edie-redshift-longitude)))
