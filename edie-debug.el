@@ -41,12 +41,13 @@
        (_ (signal 'assertion-failed (list ',expr ,expr ',expval))))
     expr))
 
-(defmacro edie-check (&rest args)
+(defmacro edie-check (&rest body)
+  "Check if BODY fulfills any of the optional assertions."
   (declare (indent defun))
 
-  (pcase-let* (((map :assert-before :assert-after :before :after) args)
+  (pcase-let* (((map :assert-before :assert-after :before :after) body)
                (body (thread-first
-                       args
+                       body
                        (map-delete :before)
                        (map-delete :assert-before)
                        (map-delete :assert-after)
