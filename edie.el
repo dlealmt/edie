@@ -7,6 +7,7 @@
 ;; Created: 2022
 ;; Version: 0.1.0
 ;; Homepage: https://github.com/dleal-mojotech/edie
+;; Package-Requires: ((emacs "28.1") (xelb "0.18"))
 
 ;; This file is part of Edie.
 
