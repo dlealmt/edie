@@ -35,6 +35,7 @@
   :group 'x)
 
 (defun edie-dispatch (keyseq)
+  "Queue an external key sequence KEYSEQ to be processed by Emacs."
   (let* ((window-system initial-window-system))
     (setq unread-command-events (listify-key-sequence (kbd keyseq)))))
 
