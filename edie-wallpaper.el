@@ -25,7 +25,7 @@
 
 ;; Edie Wallpaper changes the current wallpaper at random, after a certain
 ;; user-defined interval, using images found in a user-defined
-;; directory. It also provides a command to delete wallpaper images
+;; directory.  It also provides a command to delete wallpaper images
 ;; you no longer want.
 
 ;; By default, Edie-Wallpaper requires `nitrogen' to be installed, but you can
@@ -33,7 +33,7 @@
 ;; and `edie-wallpaper-program-args' correctly.
 
 ;; To start using Edie Wallpaper, be sure to at least set the right path to
-;; your wallpaper images directory. Then run `edie-wallpaper-mode'.
+;; your wallpaper images directory.  Then run `edie-wallpaper-mode'.
 
 ;;; Code:
 
