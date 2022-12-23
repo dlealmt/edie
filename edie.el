@@ -31,7 +31,8 @@
 ;;; Code:
 
 (defgroup edie nil
-  "Settings related to Edie and its components.")
+  "Settings related to Edie and its components."
+  :group 'x)
 
 (defun edie-dispatch (keyseq)
   (let* ((window-system initial-window-system))
