@@ -5,7 +5,6 @@
 ;; Author: David Leal <dleal@mojotech.com>
 ;; Maintainer: David Leal <dleal@mojotech.com>
 ;; Created: 2022
-;; Version: 0.0.1
 
 ;; This file is part of Edie.
 
