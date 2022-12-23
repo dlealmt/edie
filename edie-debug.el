@@ -24,7 +24,7 @@
 
 ;;; Commentary:
 
-;;
+;; Contract macros and others.
 
 ;;; Code:
 
