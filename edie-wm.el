@@ -132,7 +132,7 @@ will be applied to windows matched by FILTERS.")
   nil
   :global t
   (when edie-wm-mode
-    (let ((backend (intern (format "edie-wm-backend-%s" edie-wm-backend))))
+    (let ((backend (intern (format "edie-wm-%s" edie-wm-backend))))
       (require backend))
 
     (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)

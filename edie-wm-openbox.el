@@ -1,4 +1,4 @@
-;;; edie-wm-backend-openbox.el --- Openbox backend for edie-wm -*- lexical-binding: t -*-
+;;; edie-wm-openbox.el --- Openbox backend for edie-wm -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 David Leal
 
@@ -30,22 +30,22 @@
 
 (require 'edie-wm-x11)
 
-(defvar edie-wm-backend-openbox--process nil)
+(defvar edie-wm-openbox--process nil)
 
-(defun edie-wm-backend-start (&rest args)
-  (setq edie-wm-backend-openbox--process (start-process "edie-wm-wm" "*edie-wm-wm*" "openbox"))
+(defun edie-wm-openbox-start (&rest args)
+  (setq edie-wm-openbox--process (start-process "edie-wm-wm" "*edie-wm-wm*" "openbox"))
 
   (edie-wm-x11-mode +1)
 
-  (apply #'edie-wm-backend-configure args))
+  (apply #'edie-wm-configure args))
 
-(defun edie-wm-backend-reconfigure ()
+(defun edie-wm-openbox-reconfigure ()
   (interactive)
   (call-process "openbox" nil 0 nil "--reconfigure"))
 
-(cl-defun edie-wm-backend-configure (&key default-desktop-list)
+(cl-defun edie-wm-openbox-configure (&key default-desktop-list)
   (when default-desktop-list
     (edie-wm-x11-wm-set-desktops default-desktop-list)))
 
-(provide 'edie-wm-backend-openbox)
-;;; edie-wm-backend-openbox.el ends here
+(provide 'edie-wm-openbox)
+;;; edie-wm-openbox.el ends here
