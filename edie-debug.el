@@ -30,7 +30,14 @@
 (require 'map)
 (require 'pcase)
 
-(defvar edie-debug nil)
+(defgroup edie-debug nil
+  "Settings to help with debugging."
+  :group 'edie)
+
+(defcustom edie-debug nil
+  "Whether to enable contract checks."
+  :type 'boolean)
+
 
 (defmacro edie-match (expr expval)
   "Checke if EXPR match the `pcase' pattern EXPVAL."
