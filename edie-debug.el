@@ -38,6 +38,38 @@
   "Whether to enable contract checks."
   :type 'boolean)
 
+(defcustom edie-debug-xephyr-arguments '("-br" "-ac" "-noreset")
+  "Arguments to be passed to Xephyr."
+  :type '(repeat string))
+
+(defcustom edie-debug-xephyr-window-size '(1600 . 1200)
+  "Size of the Xephyr window, in pixels."
+  :type '(cons natnum natnum))
+
+(defcustom edie-debug-xephyr-display-number 1
+  "The display Xephyr will use when launched."
+  :type 'natnum)
+
+(defun edie-debug-try-config ()
+  (interactive)
+  (edie-debug-start-xephyr)
+  (sleep-for 1)
+  (edie-debug-start-emacs))
+
+(defun edie-debug-start-xephyr ()
+  (interactive)
+  (apply #'start-process "edie-debug-xephyr" "*edie-debug*"
+         "Xephyr" (append edie-debug-xephyr-arguments
+                          (list "-screen"
+                                (format "%dx%d"
+                                        (car edie-debug-xephyr-window-size)
+                                        (cdr edie-debug-xephyr-window-size))
+                                (format ":%d" edie-debug-xephyr-display-number)))))
+
+(defun edie-debug-start-emacs ()
+  (interactive)
+  (with-environment-variables (("DISPLAY" (format ":%d" edie-debug-xephyr-display-number)))
+    (start-process "edie-debug-emacs" "*edie-debug*" "emacs" "--debug-init")))
 
 (defmacro edie-match (expr expval)
   "Checke if EXPR match the `pcase' pattern EXPVAL."
