@@ -51,6 +51,19 @@
 
   (setq edie-wm-openbox--process (start-process "edie-wm-wm" "*edie-wm-wm*" "openbox"))
 
+  (setq edie-wm-current-desktop-function #'edie-wm-x11-current-desktop)
+  (setq edie-wm-current-window-id-function #'edie-wm-x11-current-window-id)
+  (setq edie-wm-focus-window-function #'edie-wm-x11-window-focus)
+  (setq edie-wm-set-desktop-function #'edie-wm-x11-wm-set-desktop)
+  (setq edie-wm-update-window-function #'edie-wm-x11-window-update)
+  (setq edie-wm-window-close-function #'edie-wm-x11-window-close)
+  (setq edie-wm-window-list-function #'edie-wm-x11-window-list)
+  (setq edie-wm-window-make-function #'edie-wm-x11-window-make)
+
+  (setq edie-wm-x11-on-window-focus-function #'edie-wm-on-window-focus)
+  (setq edie-wm-x11-on-window-add-function #'edie-wm-on-window-add)
+  (setq edie-wm-x11-on-window-remove-function #'edie-wm-on-window-remove)
+  (setq edie-wm-x11-on-window-update-function #'edie-wm-on-window-update)
 
   (edie-wm-x11-mode +1)
 

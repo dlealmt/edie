@@ -29,6 +29,10 @@
 (require 'map)
 (require 'pcase)
 
+(defvar edie-wm-current-desktop-function nil)
+(defvar edie-wm-focus-window-function nil)
+(defvar edie-wm-set-desktop-function nil)
+(defvar edie-wm-window-make-function nil)
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-close-function nil)
@@ -129,23 +133,28 @@ will be applied to windows matched by FILTERS.")
           (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
       (require backend)
 
-    (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
-    (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
-    (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
-    (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
-    (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
-    (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
+      (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
+      (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
+      (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
+      (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
+      (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
+      (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
 
       (funcall start-fn))))
 
 
+(defun edie-wm-current-desktop ()
+  "The desktop we are currently working in."
+  (pcase (funcall edie-wm-current-desktop-function)
+    ((seq desktop _ id) (seq-elt (edie-wm-desktop-list) id))))
+
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
 
 When called interactively, prompt for the desktop we want to
 switch to."
   (interactive (list (edie-wm-select-desktop)))
-  (edie-wm-x11-wm-set-desktop desktop))
+  (funcall edie-wm-set-desktop-function desktop))
 
 (defun edie-wm-desktop-list (&optional reload)
   "The list of virtual desktops."
@@ -171,8 +180,8 @@ switch to."
   "Make a desktop instance."
   `(desktop (:name ,name) ,id))
 
-(defalias 'edie-wm-window-make #'edie-wm-x11-window-make)
-(defalias 'edie-wm-focus-window #'edie-wm-x11-window-focus)
+(defun edie-wm-focus-window (window)
+  (funcall edie-wm-focus-window-function window))
 
 (defun edie-wm-window-id (window)
   "Return the ID of WINDOW."
