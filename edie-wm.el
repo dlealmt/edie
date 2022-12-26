@@ -26,8 +26,7 @@
 
 ;;; Code:
 
-(require 'map)
-(require 'pcase)
+(require 'edie)
 
 (defvar edie-wm-current-desktop-function nil)
 (defvar edie-wm-focus-window-function nil)

@@ -31,6 +31,8 @@
 
 ;;; Code:
 
+(require 'edie)
+
 (defgroup edie-redshift nil
   "Color temperature changer settings."
   :group 'edie

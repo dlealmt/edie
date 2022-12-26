@@ -30,6 +30,8 @@
 
 ;;; Code:
 
+(require 'map)
+(require 'pcase)
 (require 'edie-debug)
 
 (defgroup edie nil
