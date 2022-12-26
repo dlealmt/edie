@@ -75,22 +75,15 @@
   :type 'edie-wm-unit)
 
 (defcustom edie-wm-window-border-width 0
-  "The width of the border surrounding every window.
-
-This should be set to the same value that is set in the window
-manager configuration."
+  "The width of the border surrounding every window."
   :type 'edie-wm-unit)
 
-(defcustom edie-wm-window-border-active-color "#fe8019"
-  "The color of the active window border.
-
-(Doesn't really do anything yet.)"
+(defcustom edie-wm-window-active-border-color "#fe8019"
+  "The color of the active window border."
   :type 'color)
 
-(defcustom edie-wm-window-border-inactive-color "#282828"
-  "The color of inactive window borders.
-
-(Doesn't really do anything yet.)"
+(defcustom edie-wm-window-inactive-border-color "#282828"
+  "The color of inactive window borders."
   :type 'color)
 
 (defcustom edie-wm-rules-alist nil
@@ -132,8 +125,9 @@ will be applied to windows matched by FILTERS.")
   nil
   :global t
   (when edie-wm-mode
-    (let ((backend (intern (format "edie-wm-%s" edie-wm-backend))))
-      (require backend))
+    (let ((backend (intern (format "edie-wm-%s" edie-wm-backend)))
+          (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
+      (require backend)
 
     (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
     (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
@@ -142,7 +136,8 @@ will be applied to windows matched by FILTERS.")
     (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
     (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
 
-    (edie-wm-backend-start :default-desktop-list edie-wm-default-desktop-list)))
+      (funcall start-fn))))
+
 
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
