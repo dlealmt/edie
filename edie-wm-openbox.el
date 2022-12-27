@@ -83,6 +83,7 @@
 (defvar edie-wm-openbox--process nil)
 
 (defun edie-wm-openbox-start ()
+  ""
   (edie-wm-openbox--write-configuration)
 
   (setq edie-wm-openbox--process (start-process "edie-wm-wm" "*edie-wm-wm*" "openbox"))
@@ -107,6 +108,7 @@
     (edie-wm-x11-wm-set-desktops edie-wm-default-desktop-list)))
 
 (defun edie-wm-openbox--normalize-color (color)
+  ""
   (apply #'color-rgb-to-hex (append (color-name-to-rgb color) (list 2))))
 
 (defun edie-wm-openbox--write-theme ()
