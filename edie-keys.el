@@ -1,13 +1,10 @@
-;;; edie.el --- A desktop environment -*- lexical-binding: t -*-
+;;; edie-keys.el --- Global key binding management. -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 David Leal
 
 ;; Author: David Leal <dleal@mojotech.com>
 ;; Maintainer: David Leal <dleal@mojotech.com>
 ;; Created: 2022
-;; Version: 0.1.0
-;; Homepage: https://github.com/dleal-mojotech/edie
-;; Package-Requires: ((emacs "28.1") (xelb "0.18"))
 
 ;; This file is part of Edie.
 
@@ -26,17 +23,29 @@
 
 ;;; Commentary:
 
-;; Edie is an Emacs-based desktop environment.
+;;
 
 ;;; Code:
 
-(require 'map)
-(require 'pcase)
-(require 'edie-debug)
+(require 'edie)
 
-(defgroup edie nil
-  "Settings related to Edie and its components."
-  :group 'x)
+(defgroup edie-keys nil
+  ""
+  :group 'edie)
 
-(provide 'edie)
-;;; edie.el ends here
+(defcustom edie-keys-mode-map (make-sparse-keymap)
+  ""
+  :type 'keymap)
+
+(define-minor-mode edie-keys-mode
+  "Handle global key shortcuts."
+  :global t
+  :keymap edie-keys-mode-map)
+
+(defun edie-keys-dispatch (keyseq)
+  "Queue an external key sequence KEYSEQ to be processed by Emacs."
+  (let* ((window-system initial-window-system))
+    (setq unread-command-events (listify-key-sequence (kbd keyseq)))))
+
+(provide 'edie-keys)
+;;; edie-keys.el ends here
