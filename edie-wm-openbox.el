@@ -106,7 +106,7 @@
   (edie-wm-x11-mode +1)
 
   (when edie-wm-default-desktop-list
-    (edie-wm-x11-wm-set-desktops edie-wm-default-desktop-list)))
+    (edie-wm-x11-wm-set-desktops (edie-wm-desktop-list))))
 
 (defun edie-wm-openbox--normalize-color (color)
   ""
