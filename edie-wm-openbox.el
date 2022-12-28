@@ -28,6 +28,7 @@
 
 ;;; Code:
 
+(require 'dom)
 (require 'edie-wm-x11)
 (require 'xdg)
 
