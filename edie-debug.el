@@ -101,5 +101,47 @@
              ,retval))
       `(progn ,@body))))
 
+(defun edie-debug--log (fun-name fun args)
+  ""
+  (let ((buffer (get-buffer-create "*edie-debug*"))
+        (i 0)
+        retval)
+    (with-current-buffer buffer
+      (edie-debug--tagged-log fun-name "Called:")
+      (dolist (arg args)
+        (insert (format "  - (arg %d) %S\n" i arg))
+        (setq i (1+ i))
+        (goto-char (point-max)))
+      (setq retval (apply fun args))
+      (insert (format "[%s] Exited:\n" fun-name))
+      (goto-char (point-max))
+      (insert (format "  - %S\n" retval))
+      (goto-char (point-max)))
+    retval))
+
+(defun edie-debug--tagged-log (fun str)
+  ""
+  (edie-debug--log-line "[%s] %s" fun str))
+
+(defun edie-debug--log-line (str &rest args)
+  ""
+  (insert (apply #'format (concat str "\n") args))
+  (goto-char (point-max)))
+
+(defmacro edie-debug-instrument (&rest funs)
+  ""
+  (let ((advices nil)
+        (closure (make-symbol "closure"))
+        (args (make-symbol "args")))
+    `(progn
+       ,@(dolist (fun funs advices)
+           (let ((advice-name (intern (format "%s--with-logging" fun))))
+             (push `(advice-add ',fun :around ',advice-name) advices)
+             (push
+              `(defalias ',advice-name
+                 (lambda (,closure &rest ,args)
+                   (edie-debug--log ',fun ,closure ,args)))
+              advices))))))
+
 (provide 'edie-debug)
 ;;; edie-debug.el ends here
