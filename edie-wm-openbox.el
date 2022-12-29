@@ -28,7 +28,10 @@
 
 ;;; Code:
 
+(require 'color)
 (require 'dom)
+(require 'xml)
+(require 'edie-wm)
 (require 'edie-wm-x11)
 (require 'xdg)
 
