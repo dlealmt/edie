@@ -35,17 +35,10 @@
   "Settings for Edie bar."
   :group 'edie)
 
-(defcustom edie-bar-frame-spec
-  '((minibuffer . (:frame-parameters ((left . 0)
-                                      (top . 0)
-                                      (width . 1.0)
-                                      (height . (text-pixels . 48))))))
-  "Configuration for Edie bars."
-  :type '(alist :key-type symbol :value-type (plist :key-type keyword))
-  :group 'edie-bar)
-
 (defcustom edie-bar-default-frame-alist
-  '((horizontal-scroll-bars . nil)
+  '((border-width . 0)
+    (dedicated . t)
+    (horizontal-scroll-bars . nil)
     (internal-border-width . 0)
     (left-fringe . 0)
     (line-spacing . 0)
@@ -53,6 +46,10 @@
     (menu-bar-lines . 0)
     (no-accept-focus . t)
     (right-fringe . 0)
+    (scroll-bar-height . 0)
+    (scroll-bar-width . 0)
+    (skip-pager . t)
+    (skip-taskbar . t)
     (tool-bar-lines . 0)
     (undecorated . t)
     (unsplittable . t)
@@ -63,22 +60,9 @@
   :type '(alist :key-type symbol)
   :group 'edie-bar)
 
-(defvar edie-bar-frame-list nil)
-
-(define-minor-mode edie-bar-mode
-  nil
-  :global t
-  (when edie-bar-mode
-    (let ((frames nil))
-      (pcase-dolist (`(,frame-type . ,(map :frame-parameters)) edie-bar-frame-spec)
-        (when (eq frame-type 'minibuffer)
-          (push (make-frame-on-display x-display-name
-                                       (map-merge 'alist
-                                                  edie-bar-default-frame-alist
-                                                  frame-parameters
-                                                  '((minibuffer . only))))
-                frames)))
-      (setq edie-bar-frame-list (nreverse frames)))))
+(defun edie-bar-make-bar (&optional params)
+  (make-frame-on-display x-display-name
+			 (map-merge 'alist edie-bar-default-frame-alist params)))
 
 (defun edie-bar-resize (frame)
   ""
