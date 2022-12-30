@@ -37,6 +37,8 @@
 
 ;;; Code:
 
+(require 'xdg)
+
 (defgroup edie-wallpaper nil
   "Wallpaper changer settings."
   :group 'edie
@@ -54,7 +56,7 @@
   "Command line switches to pass to `edie-wallpaper-program'."
   :type '(list string))
 
-(defcustom edie-wallpaper-image-path "~/wallpapers"
+(defcustom edie-wallpaper-image-path (xdg-user-dir "PICTURES")
   "Path to the directory where the images are stored."
   :type 'directory)
 
