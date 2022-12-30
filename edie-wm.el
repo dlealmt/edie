@@ -80,7 +80,7 @@
   :type 'edie-wm-unit)
 
 (defcustom edie-wm-window-active-border-color "#fe8019"
-  "The color of the active window border."
+  "The color of active window borders."
   :type 'color)
 
 (defcustom edie-wm-window-inactive-border-color "#282828"
