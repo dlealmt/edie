@@ -31,6 +31,8 @@
 (eval-when-compile
   (require 'pcase))
 
+(require 'svg)
+
 (defgroup edie-bar nil
   "Settings for Edie bar."
   :group 'edie)
@@ -60,7 +62,18 @@
   :type '(alist :key-type symbol)
   :group 'edie-bar)
 
+;;;###autoload
+(define-minor-mode edie-bar-mode
+  nil
+  :global t
+  (when edie-bar-mode
+    (add-to-list 'set-message-functions #'edie-bar-set-message t)
+    (setq command-error-function #'edie-bar-command-error)
+    (add-function :filter-args completing-read-function #'edie-bar-svg-prompt)
+    (advice-add #'vertico--format-count :filter-return #'edie-bar-vertico-format-count)))
+
 (defun edie-bar-make-bar (&optional params)
+  ""
   (make-frame-on-display x-display-name
 			 (map-merge 'alist edie-bar-default-frame-alist params)))
 
@@ -75,6 +88,54 @@
                (next-height (thread-first buf-height (max min-height) (min max-height))))
     (when (/= cur-height next-height)
       (set-frame-height frame next-height nil t))))
+
+(defun edie-bar-set-message (message)
+  ""
+  (with-selected-frame (window-frame (minibuffer-window))
+    (let ((svg (svg-create (frame-pixel-width) (frame-pixel-height))))
+      (svg-text svg message
+                :x 48 :y 25
+                :text-anchor "left" :alignment-baseline "middle"
+                :font-family "Ubuntu Mono" :font-size "20")
+      (put-text-property 0 (length message) 'display (svg-image svg) message))
+    message))
+
+(defun edie-bar-command-error (data _ _)
+  ""
+  (message "%s" (error-message-string data)))
+
+(defun edie-bar-vertico-format-count (count)
+  ""
+  (with-selected-frame (window-frame (minibuffer-window))
+    (let* ((str (concat count " "))
+           (cw (* (frame-char-width) 1.25))
+           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
+      (svg-text svg str :x 48 :y 25
+                :alignment-baseline "middle"
+                :font-family "Ubuntu Mono" :font-size "20")
+      (put-text-property 0 (length str) 'display (svg-image svg) str)
+      str)))
+
+(cl-defun edie-bar-svg-prompt ((str &rest args))
+  (with-selected-frame (window-frame (minibuffer-window))
+    (let* ((cw (* (frame-char-width) 1.25))
+           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
+      (svg-text svg str :x 48 :y 25
+                :alignment-baseline "middle"
+                :font-family "Ubuntu Mono" :font-size "20")
+      (put-text-property 0 (length str) 'display (svg-image svg) str)
+      (append (list str) args))))
+
+(cl-defun edie-bar-svg-vertico-candicate (str)
+  (with-selected-frame (window-frame (minibuffer-window))
+    (let* ((cw (frame-char-width))
+           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
+      (svg-text svg str :x 0 :y 25
+                :text-anchor "center"
+                :alignment-baseline "middle"
+                :font-family "Ubuntu Mono" :font-size "20")
+      (put-text-property 0 (length str) 'display (svg-image svg) str)
+      str)))
 
 (provide 'edie-bar)
 ;;; edie-bar.el ends here

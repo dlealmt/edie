@@ -61,6 +61,7 @@
         (add-hook 'before-init-hook #'edie-bar-mode -90)
         (add-hook 'after-init-hook #'edie-wm-mode 0)
         (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
+        (add-hook 'after-init-hook #'edie-bar-mode 0)
         (add-hook 'emacs-startup-hook #'edie-keys-mode 0)
         (add-hook 'emacs-startup-hook #'edie-redshift-mode 90)
         (add-hook 'emacs-startup-hook #'edie-run-mode 90)
