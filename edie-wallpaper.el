@@ -37,8 +37,6 @@
 
 ;;; Code:
 
-(require 'edie)
-
 (defgroup edie-wallpaper nil
   "Wallpaper changer settings."
   :group 'edie

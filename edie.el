@@ -30,13 +30,47 @@
 
 ;;; Code:
 
-(require 'map)
-(require 'pcase)
+(require 'edie-bar)
 (require 'edie-debug)
+(require 'edie-keys)
+(require 'edie-redshift)
+(require 'edie-run)
+(require 'edie-wallpaper)
+(require 'edie-wm)
 
 (defgroup edie nil
   "Settings related to Edie and its components."
   :group 'x)
+
+(defcustom edie-after-init-hook nil
+  "Hook run when Emacs' `after-init-hook' runs."
+  :type 'hook
+  :group 'edie)
+
+(defcustom edie-startup-hook nil
+  "Hook run when Emacs' `emacs-startup-hook' runs."
+  :type 'hook
+  :group 'edie)
+
+;;;###autoload
+(define-minor-mode edie-mode
+  nil
+  :global t
+  (when edie-mode
+      (progn
+        (add-hook 'before-init-hook #'edie-bar-mode -90)
+        (add-hook 'after-init-hook #'edie-wm-mode 0)
+        (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
+        (add-hook 'emacs-startup-hook #'edie-keys-mode 0)
+        (add-hook 'emacs-startup-hook #'edie-redshift-mode 90)
+        (add-hook 'emacs-startup-hook #'edie-run-mode 90)
+        (add-hook 'emacs-startup-hook #'edie-bar-mode 90))))
+
+(defun edie--after-init ()
+  (run-hooks 'edie-after-init-hook))
+
+(defun edie--startup ()
+  (run-hooks 'edie-startup-hook))
 
 (provide 'edie)
 ;;; edie.el ends here

@@ -27,8 +27,6 @@
 
 ;;; Code:
 
-(require 'edie)
-
 (defgroup edie-keys nil
   ""
   :group 'edie)
