@@ -1,5 +1,5 @@
 ;;; edie-wm.el --- Tools for managing windows -*- lexical-binding: t -*-
-;; Copyright (C) 2022 David Leal
+;; Copyright (C) 2022-2023 David Leal
 
 ;; Author: David Leal <dleal@mojotech.com>
 ;; Maintainer: David Leal <dleal@mojotech.com>
