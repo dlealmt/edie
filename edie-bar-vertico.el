@@ -65,8 +65,9 @@
            (candidates nil)
            candidate)
       (while (and (setq candidate (pop collection)) (> width 0))
-        (if (consult--tofu-get candidate)
-            (setq candidate (substring candidate 0 (1- (length candidate)))))
+        ;; FIXME This is specific to consult. It shouldn't be here
+        (when (text-property-any 0 (length candidate) 'consult-strip t candidate)
+          (setq candidate (substring candidate 0 (1- (length candidate)))))
         (setq candidate (format " %s " candidate))
         (setq width (- width (string-width candidate)))
         (push candidate candidates))
