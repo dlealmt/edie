@@ -62,6 +62,8 @@
   :type '(alist :key-type symbol)
   :group 'edie-bar)
 
+(defvar edie-bar-frame nil)
+
 ;;;###autoload
 (define-minor-mode edie-bar-mode
   nil
@@ -74,8 +76,15 @@
 
 (defun edie-bar-make-bar (&optional params)
   ""
-  (make-frame-on-display x-display-name
-			 (map-merge 'alist edie-bar-default-frame-alist params)))
+  (setq default-minibuffer-frame
+        (make-frame-on-display
+         x-display-name
+         (map-merge 'alist
+                    minibuffer-frame-alist
+                    edie-bar-default-frame-alist
+                    params
+                    '((minibuffer . only)))))
+  (setq edie-bar-frame default-minibuffer-frame))
 
 (defun edie-bar-resize (frame)
   ""
@@ -108,34 +117,26 @@
   ""
   (with-selected-frame (window-frame (minibuffer-window))
     (let* ((str (concat count " "))
-           (cw (* (frame-char-width) 1.25))
+           (cw (frame-char-width))
            (svg (svg-create (* (length str) cw) (frame-pixel-height))))
-      (svg-text svg str :x 48 :y 25
+      (svg-text svg str :x 0 :y 25
                 :alignment-baseline "middle"
-                :font-family "Ubuntu Mono" :font-size "20")
+                :font-family "Ubuntu Mono" :font-size "19")
       (put-text-property 0 (length str) 'display (svg-image svg) str)
       str)))
 
 (cl-defun edie-bar-svg-prompt ((str &rest args))
-  (with-selected-frame (window-frame (minibuffer-window))
-    (let* ((cw (* (frame-char-width) 1.25))
-           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
-      (svg-text svg str :x 48 :y 25
-                :alignment-baseline "middle"
-                :font-family "Ubuntu Mono" :font-size "20")
-      (put-text-property 0 (length str) 'display (svg-image svg) str)
-      (append (list str) args))))
-
-(cl-defun edie-bar-svg-vertico-candicate (str)
-  (with-selected-frame (window-frame (minibuffer-window))
-    (let* ((cw (frame-char-width))
-           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
-      (svg-text svg str :x 0 :y 25
-                :text-anchor "center"
-                :alignment-baseline "middle"
-                :font-family "Ubuntu Mono" :font-size "20")
-      (put-text-property 0 (length str) 'display (svg-image svg) str)
-      str)))
+  (set-text-properties 0 (length str) nil str)
+  (let* ((bw (with-current-buffer (get-buffer-create "*edie-window-pixels*")
+               (delete-region (point-min) (point-max))
+               (insert str)
+               (car (buffer-text-pixel-size nil (minibuffer-window)))))
+         (svg (svg-create bw (frame-pixel-height default-minibuffer-frame))))
+    (svg-text svg str :x 0 :y 25
+              :alignment-baseline "middle"
+              :font-family "Ubuntu Mono" :font-size "19")
+    (put-text-property 0 (length str) 'display (svg-image svg) str)
+    (append (list str) args)))
 
 (provide 'edie-bar)
 ;;; edie-bar.el ends here
