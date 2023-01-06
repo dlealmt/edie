@@ -44,13 +44,12 @@
     ((seq tag &rest children)
      `(,tag nil ,@(mapcar #'edie-ml-normalize children)))))
 
-(cl-defun edie-ml ((&key width height unit) spec)
+(cl-defun edie-ml ((&key width height) spec)
   ""
   (cl-assert (and (numberp width) (numberp height)))
-  (cl-assert (consp unit))
 
-  (pcase-let* ((edie-ml-unit-x (or edie-ml-unit-x (car unit)))
-               (edie-ml-unit-y (or edie-ml-unit-y (cdr unit)))
+  (pcase-let* ((edie-ml-unit-x (or edie-ml-unit-x (frame-char-width)))
+               (edie-ml-unit-y (or edie-ml-unit-y (frame-char-height)))
                ((seq tag attrs &rest children) (edie-ml-normalize spec))
                (merged-attrs (map-merge 'plist `(:width ,width :height ,height) attrs)))
     `(svg

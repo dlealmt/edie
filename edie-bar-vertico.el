@@ -42,13 +42,12 @@
 (defun edie-bar-vertico--display-candidates (candidates)
   ""
   (with-selected-frame edie-bar-frame
-    (let* ((char-width (frame-char-width))
-           (char-height (frame-char-height))
+    (let* ((char-height (frame-char-height))
            (width (edie-bar-vertico--candidates-width))
            (height (/ (frame-pixel-height) (float char-height)))
            (candidates-string (string-join candidates))
            (rendered (edie-ml-render
-                      `(:width ,width :height ,height :unit ,(cons char-width char-height))
+                      `(:width ,width :height ,height)
                       `(text ,candidates-string))))
       (move-overlay vertico--candidates-ov (point-max) (point-max))
       (overlay-put vertico--candidates-ov 'after-string
