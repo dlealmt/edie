@@ -106,56 +106,52 @@
           (setf (alist-get attr attrs) (face-attribute fallback-face attr)))))
     attrs))
 
+(defun edie-ml--tspan-attributes (face)
+  ""
+  (map-let (:family :foreground :height)
+      (edie-ml--face-attributes face '(:family :foreground :height) 'default)
+    (append
+     (when family `((font-family . ,family)))
+     (when foreground `((fill . ,foreground)))
+     (when height `((font-size . ,(format "%fpt" (/ height 10.0))))))))
+
+(defun edie-ml--rect-attributes (face)
+  ""
+  (map-let (:background) (edie-ml--face-attributes face '(:background))
+    (when background `((fill . ,background)))))
+
 (cl-defmethod edie-ml-parse (((_ (&key width height) body) (head text)))
   (let ((tspans nil)
         (rects nil))
     (if-let ((intervals (object-intervals body)))
         (pcase-let* ((`(,from ,to ,(map face)) (car intervals))
-                     (text-face-attrs (edie-ml--face-attributes
-                                       face '(:family :foreground :height) 'default))
-                     (text-attrs
-                      (map-let (:family :foreground :height) text-face-attrs
-                        (append
-                         (when family `((font-family . ,family)))
-                         (when foreground `((fill . ,foreground)))
-                         (when height `((font-size . ,(format "%fpt" (/ height 10.0))))))))
+                     (text-attrs (edie-ml--tspan-attributes face))
                      (text (substring-no-properties body from to))
-                     (rect-face-attrs (edie-ml--face-attributes face '(:background)))
-                     (rect-attrs
-                      (map-let (:background) rect-face-attrs
-                        (when background `((fill . ,background)))))
+                     (rect-attrs (edie-ml--rect-attributes face))
                      (rect-from from)
                      (str (substring-no-properties body from to)))
           (pcase-dolist (`(,from ,to ,(map face)) (cdr intervals))
-            (setq text-face-attrs (edie-ml--face-attributes
-                                   face '(:family :foreground :height) 'default)
-                  rect-face-attrs (edie-ml--face-attributes face '(:background))
-                  str (substring-no-properties body from to))
-            (map-let (:family :foreground :height) text-face-attrs
-              (let ((attrs (append
-                            (when family `((font-family . ,family)))
-                            (when foreground `((fill . ,foreground)))
-                            (when height `((font-size . ,(format "%fpt" (/ height 10.0))))))))
-                (if (equal text-attrs attrs)
-                    (setq text (concat text str))
-                  (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans)
-                  (setq text-attrs attrs)
-                  (setq text str))))
-            (map-let (:background) rect-face-attrs
-              (let ((attrs (when background `((fill . ,background)))))
-                (when (not (equal rect-attrs attrs))
-                  (when (alist-get 'fill rect-attrs)
-                    (push `(rect
-                            ,(map-merge
-                              'alist
-                              `((x . ,(* rect-from edie-ml-unit-x))
-                                (y . 0)
-                                (width . ,(format "%dpx" (* (- from rect-from) edie-ml-unit-x)))
-                                (height . "100%"))
-                              rect-attrs))
-                          rects))
-                  (setq rect-attrs attrs)
-                  (setq rect-from to)))))
+            (setq str (substring-no-properties body from to))
+            (let ((attrs (edie-ml--tspan-attributes face)))
+              (if (equal text-attrs attrs)
+                  (setq text (concat text str))
+                (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans)
+                (setq text-attrs attrs)
+                (setq text str)))
+            (let ((attrs (edie-ml--rect-attributes face)))
+              (when (not (equal rect-attrs attrs))
+                (when (alist-get 'fill rect-attrs)
+                  (push `(rect
+                          ,(map-merge
+                            'alist
+                            `((x . ,(* rect-from edie-ml-unit-x))
+                              (y . 0)
+                              (width . ,(format "%dpx" (* (- from rect-from) edie-ml-unit-x)))
+                              (height . "100%"))
+                            rect-attrs))
+                        rects))
+                (setq rect-attrs attrs)
+                (setq rect-from to))))
           (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans))
       (push `(tspan nil ,body) tspans))
     (append
