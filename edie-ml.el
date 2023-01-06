@@ -91,34 +91,45 @@
 
 (defconst pt-to-pixel-ratio 1.3333343412075)
 
+(defun edie-ml--face-attributes (faces attribute-list)
+  ""
+  (let ((faces (if (listp faces) faces (list faces)))
+        (attrs nil))
+    (dolist (face faces)
+      (dolist (attr attribute-list)
+        (when-let ((val (face-attribute-specified-or (face-attribute face attr) nil))
+                   ((not (alist-get attr attrs))))
+          (setf (alist-get attr attrs) val))))
+    attrs))
+
 (cl-defmethod edie-ml-parse (((_ (&key width height) body) (head text)))
   (let ((tspans nil)
         (rects nil))
     (if-let ((intervals (object-intervals body)))
         (pcase-dolist (`(,from ,to ,(map face)) intervals)
-          (let ((faces (cond
-                        ((listp face) (nreverse face))
-                        (face (list face))
-                        (t nil)))
-                (str (substring-no-properties body from to))
-                (text-attrs nil)
-                (rect-attrs nil))
-            (dolist (f (append faces '(default)))
-              (map-let (fill font-family font-size) text-attrs
-                (when-let (((not fill))
-                           (fg (face-attribute-specified-or (face-attribute f :foreground) nil)))
-                  (push `(fill . ,fg) text-attrs))
-                (when-let (((not font-family))
-                           (fam (face-attribute-specified-or (face-attribute f :family) nil)))
-                  (push `(font-family . ,fam) text-attrs))
-                (when-let (((not font-size))
-                           (size (face-attribute-specified-or (face-attribute f :height) nil)))
-                  (push `(font-size . ,(format "%fpt" (/ size 10.0))) text-attrs))))
-            (dolist (f faces)
-              (map-let (fill) rect-attrs
-                (when-let (((not fill))
-                           (fg (face-attribute-specified-or (face-attribute f :background) nil)))
-                  (push `(fill . ,fg) rect-attrs))))
+          (let* ((text-face-attrs (edie-ml--face-attributes face '(:family :foreground :height)))
+                 (rect-face-attrs (edie-ml--face-attributes face '(:background)))
+                 (str (substring-no-properties body from to))
+                 (text-attrs nil)
+                 (rect-attrs nil))
+            (map-let (fill font-family font-size) text-attrs
+              (when-let (((not fill))
+                         (fg (alist-get :foreground text-face-attrs
+                                        (face-attribute 'default :foreground))))
+                (push `(fill . ,fg) text-attrs))
+              (when-let (((not font-family))
+                         (fam (alist-get :family text-face-attrs
+                                         (face-attribute 'default :family))))
+                (push `(font-family . ,fam) text-attrs))
+              (when-let (((not font-size))
+                         (size (alist-get :height text-face-attrs
+                                          (face-attribute 'default :height))))
+                (push `(font-size . ,(format "%fpt" (/ size 10.0))) text-attrs)))
+            (map-let (fill) rect-attrs
+              (when-let (((not fill))
+                         (fg (alist-get :background rect-face-attrs
+                                        (face-attribute 'default :background))))
+                (push `(fill . ,fg) rect-attrs)))
             (push `(tspan ,text-attrs ,(xml-escape-string str)) tspans)
             (when rect-attrs
               (push `(rect ,(map-merge 'alist
