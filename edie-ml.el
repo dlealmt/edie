@@ -91,15 +91,19 @@
 
 (defconst pt-to-pixel-ratio 1.3333343412075)
 
-(defun edie-ml--face-attributes (faces attribute-list)
+(defun edie-ml--face-attributes (faces attribute-list &optional fallback-face)
   ""
   (let ((faces (if (listp faces) faces (list faces)))
         (attrs nil))
     (dolist (face faces)
       (dolist (attr attribute-list)
-        (when-let ((val (face-attribute-specified-or (face-attribute face attr) nil))
-                   ((not (alist-get attr attrs))))
-          (setf (alist-get attr attrs) val))))
+        (when (not (alist-get attr attrs))
+          (setf (alist-get attr attrs) (face-attribute-specified-or
+                                        (face-attribute face attr) nil)))))
+    (when fallback-face
+      (dolist (attr attribute-list)
+        (unless (alist-get attr attrs)
+          (setf (alist-get attr attrs) (face-attribute fallback-face attr)))))
     attrs))
 
 (cl-defmethod edie-ml-parse (((_ (&key width height) body) (head text)))
@@ -107,29 +111,19 @@
         (rects nil))
     (if-let ((intervals (object-intervals body)))
         (pcase-dolist (`(,from ,to ,(map face)) intervals)
-          (let* ((text-face-attrs (edie-ml--face-attributes face '(:family :foreground :height)))
+          (let* ((text-face-attrs (edie-ml--face-attributes
+                                   face '(:family :foreground :height) 'default))
                  (rect-face-attrs (edie-ml--face-attributes face '(:background)))
                  (str (substring-no-properties body from to))
                  (text-attrs nil)
                  (rect-attrs nil))
-            (map-let (fill font-family font-size) text-attrs
-              (when-let (((not fill))
-                         (fg (alist-get :foreground text-face-attrs
-                                        (face-attribute 'default :foreground))))
-                (push `(fill . ,fg) text-attrs))
-              (when-let (((not font-family))
-                         (fam (alist-get :family text-face-attrs
-                                         (face-attribute 'default :family))))
-                (push `(font-family . ,fam) text-attrs))
-              (when-let (((not font-size))
-                         (size (alist-get :height text-face-attrs
-                                          (face-attribute 'default :height))))
-                (push `(font-size . ,(format "%fpt" (/ size 10.0))) text-attrs)))
-            (map-let (fill) rect-attrs
-              (when-let (((not fill))
-                         (fg (alist-get :background rect-face-attrs
-                                        (face-attribute 'default :background))))
-                (push `(fill . ,fg) rect-attrs)))
+            (map-let (:family :foreground :height) text-face-attrs
+              (setq text-attrs (append
+                                (when family `((font-family . ,family)))
+                                (when foreground `((fill . ,foreground)))
+                                (when height `((font-size . ,(format "%fpt" (/ height 10.0))))))))
+            (map-let (:background) rect-face-attrs
+              (when background (setq rect-attrs `((fill . ,background)))))
             (push `(tspan ,text-attrs ,(xml-escape-string str)) tspans)
             (when rect-attrs
               (push `(rect ,(map-merge 'alist
