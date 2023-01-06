@@ -129,7 +129,7 @@
                      (text (substring-no-properties body from to))
                      (rect-attrs (edie-ml--rect-attributes face))
                      (rect-from from)
-                     (str (substring-no-properties body from to)))
+                     (str nil))
           (pcase-dolist (`(,from ,to ,(map face)) (cdr intervals))
             (setq str (substring-no-properties body from to))
             (let ((attrs (edie-ml--tspan-attributes face)))
