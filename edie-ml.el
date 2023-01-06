@@ -44,17 +44,17 @@
     ((seq tag &rest children)
      `(,tag nil ,@(mapcar #'edie-ml-normalize children)))))
 
-(cl-defun edie-ml ((&key width height) spec)
+(cl-defun edie-ml ((&key (width nil) (height nil)) spec)
   ""
-  (cl-assert (and (numberp width) (numberp height)))
-
   (pcase-let* ((edie-ml-unit-x (or edie-ml-unit-x (frame-char-width)))
                (edie-ml-unit-y (or edie-ml-unit-y (frame-char-height)))
+               (height (or (and height (* height edie-ml-unit-y)) (frame-pixel-height)))
+               (width (or (and width (* width edie-ml-unit-x)) (frame-pixel-width)))
                ((seq tag attrs &rest children) (edie-ml-normalize spec))
                (merged-attrs (map-merge 'plist `(:width ,width :height ,height) attrs)))
     `(svg
-      ((width . ,(* width edie-ml-unit-x))
-       (height . ,(* height edie-ml-unit-y))
+      ((width . ,width)
+       (height . ,height)
        (version . "1.1")
        (xmlns . "http://www.w3.org/2000/svg")
        (xmlns:xlink . "http://www.w3.org/1999/xlink"))
