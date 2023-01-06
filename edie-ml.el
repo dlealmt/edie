@@ -118,7 +118,7 @@
             (when-let (((not fill))
                        (fg (face-attribute-specified-or (face-attribute f :background) nil)))
               (push `(fill . ,fg) rect-attrs))))
-        (push `(tspan ,text-attrs ,str) tspans)
+        (push `(tspan ,text-attrs ,(xml-escape-string str)) tspans)
         (when rect-attrs
           (push `(rect ,(map-merge 'alist
                                    `((x . ,(* from edie-ml-unit-x))
