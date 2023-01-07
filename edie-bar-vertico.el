@@ -71,6 +71,12 @@
         (when-let ((c (car candidates)))
           (add-face-text-property 0 (length c) 'vertico-current 'append c))))))
 
+(defun edie-bar-vertico-format-count (count)
+  ""
+  (with-selected-frame edie-bar-frame
+    (propertize (substring-no-properties count)
+                'display (edie-ml-render `(:width ,(length count)) `(text ,count)))))
+
 (defun edie-bar-vertico--candidates-width ()
   (- (frame-width) (car (posn-col-row (posn-at-point (1- (point-max)))))))
 
@@ -81,11 +87,13 @@
       (progn
         (add-to-list 'minor-mode-map-alist `(vertico--input . ,edie-bar-vertico-map))
         (advice-add #'vertico--arrange-candidates :override #'edie-bar-vertico--arrange-candidates)
-        (advice-add #'vertico--display-candidates :override #'edie-bar-vertico--display-candidates))
+        (advice-add #'vertico--display-candidates :override #'edie-bar-vertico--display-candidates)
+        (advice-add #'vertico--format-count :filter-return #'edie-bar-vertico-format-count))
     (setq minor-mode-map-alist (delete `(vertico--input . ,edie-bar-vertico-map)
                                        minor-mode-map-alist))
     (advice-remove #'vertico--arrange-candidates #'edie-bar-vertico--arrange-candidates)
-    (advice-remove #'vertico--display-candidates #'edie-bar-vertico--display-candidates)))
+    (advice-remove #'vertico--display-candidates #'edie-bar-vertico--display-candidates)
+    (advice-remove #'vertico--format-count #'edie-bar-vertico-format-count)))
 
 (provide 'edie-bar-vertico)
 ;;; edie-bar-vertico.el ends here

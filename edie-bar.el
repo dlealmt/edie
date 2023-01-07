@@ -71,8 +71,7 @@
   (when edie-bar-mode
     (add-to-list 'set-message-functions #'edie-bar-set-message t)
     (setq command-error-function #'edie-bar-command-error)
-    (add-function :filter-args completing-read-function #'edie-bar-svg-prompt)
-    (advice-add #'vertico--format-count :filter-return #'edie-bar-vertico-format-count)))
+    (add-function :filter-args completing-read-function #'edie-bar-svg-prompt)))
 
 (defun edie-bar-make-bar (&optional params)
   ""
@@ -106,12 +105,6 @@
 (defun edie-bar-command-error (data _ _)
   ""
   (message "%s" (error-message-string data)))
-
-(defun edie-bar-vertico-format-count (count)
-  ""
-  (with-selected-frame edie-bar-frame
-    (propertize (substring-no-properties count)
-                'display (edie-ml-render `(:width ,(length count)) `(text ,count)))))
 
 (cl-defun edie-bar-svg-prompt ((str &rest args))
   (with-selected-frame edie-bar-frame
