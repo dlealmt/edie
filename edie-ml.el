@@ -126,6 +126,7 @@
                      (text (substring-no-properties body from to))
                      (rect-attrs (edie-ml--rect-attributes face))
                      (rect-from from)
+                     (rect-to to)
                      (str nil))
           (pcase-dolist (`(,from ,to ,(map face)) (cdr intervals))
             (setq str (substring-no-properties body from to))
@@ -136,7 +137,8 @@
                 (setq text-attrs attrs)
                 (setq text str)))
             (let ((attrs (edie-ml--rect-attributes face)))
-              (when (not (equal rect-attrs attrs))
+              (if (equal rect-attrs attrs)
+                  (setq rect-to to)
                 (when (alist-get 'fill rect-attrs)
                   (push `(rect
                           ,(map-merge
@@ -149,6 +151,16 @@
                         rects))
                 (setq rect-attrs attrs)
                 (setq rect-from to))))
+          (when rect-attrs
+            (push `(rect
+                    ,(map-merge
+                      'alist
+                      `((x . ,(* rect-from edie-ml-unit-x))
+                        (y . 0)
+                        (width . ,(format "%dpx" (* (- rect-to rect-from) edie-ml-unit-x)))
+                        (height . "100%"))
+                      rect-attrs))
+                  rects))
           (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans))
       (push `(tspan nil ,body) tspans))
     (append
