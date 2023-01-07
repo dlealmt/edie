@@ -87,90 +87,123 @@
 
 ;; text
 
-(defconst pt-to-pixel-ratio 1.3333343412075)
+(defun edie-ml--face-attributes-at (point str attribute-filter)
+  "Get a subset of face attributes at POINT in STR.
 
-(defun edie-ml--face-attributes (faces attribute-list &optional fallback-face)
-  ""
-  (let ((faces (if (listp faces) faces (list faces)))
-        (attrs nil))
-    (dolist (face faces)
-      (dolist (attr attribute-list)
-        (when (not (alist-get attr attrs))
-          (setf (alist-get attr attrs) (face-attribute-specified-or
-                                        (face-attribute face attr) nil)))))
-    (when fallback-face
-      (dolist (attr attribute-list)
-        (unless (alist-get attr attrs)
-          (setf (alist-get attr attrs) (face-attribute fallback-face attr)))))
-    attrs))
+ATTRIBUTE-FILTER is the list of face attributes that interest us.
 
-(defun edie-ml--tspan-attributes (face)
+Only returns attributes that are specified (i.e., their value is
+something other than `unspecified') for the faces found at point"
+  (when-let ((props (text-properties-at point str))
+             (face-prop (plist-get props 'face)))
+    (let ((attrs nil))
+      (dolist (face (if (listp face-prop) face-prop (list face-prop)) attrs)
+        (setq attrs (map-merge 'alist
+                               (edie-ml--specified-face-attributes face attribute-filter)
+                               attrs))))))
+
+(defun edie-ml--face-attributes-to-svg (face-attributes)
+  "Convert FACE-ATTRIBUTES to SVG presentation attributes.
+
+The `:foreground' and `:background' attributes both map to `fill'
+so if both are in FACE-ATTRIBUTES, `fill' will be overwritten."
+  (let ((alist nil))
+    (pcase-dolist (`(,attr . ,val) face-attributes alist)
+      (cond
+       ((eq attr :family) (push (cons 'font-family val) alist))
+       ((eq attr :foreground) (push (cons 'fill val) alist))
+       ((eq attr :height) (push (cons 'font-size (format "%fpt" (/ val 10.0))) alist))
+       ((eq attr :background) (push (cons 'fill val) alist))))))
+
+(defun edie-ml--text (tspans backgrounds)
   ""
-  (map-let (:family :foreground :height)
-      (edie-ml--face-attributes face '(:family :foreground :height) 'default)
+  (let ((default-attrs (edie-ml--face-attributes-to-svg
+                        (face-all-attributes 'default (selected-frame)))))
     (append
-     (when family `((font-family . ,family)))
-     (when foreground `((fill . ,foreground)))
-     (when height `((font-size . ,(format "%fpt" (/ height 10.0))))))))
+     backgrounds
+     (list
+      `(text ,(map-merge
+               'alist
+               default-attrs
+               '((width . "100%")
+                 (height . "100%")
+                 (x . 0)
+                 (y . "50%")
+                 (dominant-baseline . "middle")
+                 ("xml:space" . "preserve")))
+             ,@tspans)))))
 
-(defun edie-ml--rect-attributes (face)
+(defun edie-ml--text-span (string &optional attributes)
   ""
-  (map-let (:background) (edie-ml--face-attributes face '(:background))
-    (when background `((fill . ,background)))))
+  (let* ((base-attrs (thread-last
+                       '(:family :foreground :height)
+                       (edie-ml--face-attributes-at 0 string)
+                       (edie-ml--face-attributes-to-svg)))
+         (svg-attrs (map-merge 'alist
+                               `((y . "50%")
+                                 (heigth . "100%")
+                                 (alignment-baseline . "central"))
+                               base-attrs
+                               attributes)))
+    (append (list 'tspan svg-attrs) (list (substring-no-properties string)))))
+
+(defun edie-ml--text-background (string attributes)
+  ""
+  (let* ((default-attrs (edie-ml--face-attributes-to-svg
+                         (edie-ml--specified-face-attributes 'default '(:background))))
+         (base-attrs (thread-last
+                       '(:background)
+                       (edie-ml--face-attributes-at 0 string)
+                       (edie-ml--face-attributes-to-svg)))
+         (svg-attrs (map-merge 'alist
+                               `((x . ,(* (alist-get 'x attributes) edie-ml-unit-x))
+                                 (width . ,(* (length string) edie-ml-unit-x))
+                                 (height . "100%"))
+                               default-attrs
+                               base-attrs
+                               attributes)))
+    (list 'rect svg-attrs)))
+
+(defun edie-ml--string-to-text (string)
+  ""
+  (let ((point 0)
+        (tspans nil)
+        (backgrounds nil))
+    (while point
+      (let* ((next-point (next-single-property-change point 'face string))
+             (string (substring string point next-point))
+             (this-text (edie-ml--text-span string))
+             (this-text-attrs (nth 1 this-text))
+             (this-text-content (nth 2 this-text))
+             (prev-text (car tspans))
+             (prev-text-attrs (nth 1 prev-text))
+             (prev-text-content (nth 2 prev-text))
+             (this-bg (edie-ml--text-background string `((x . ,point))))
+             (this-bg-attrs (nth 1 this-bg))
+             (this-bg-fill (alist-get 'fill this-bg-attrs))
+             (this-bg-width (alist-get 'width this-bg-attrs))
+             (prev-bg (car backgrounds))
+             (prev-bg-attrs (nth 1 prev-bg))
+             (prev-bg-fill (alist-get 'fill prev-bg-attrs))
+             (prev-bg-width (alist-get 'width prev-bg-attrs)))
+        (cond
+         ((not this-text)
+          (error "`this-text' should always be set"))
+         ((equal this-text-attrs prev-text-attrs)
+          (setf (nth 2 prev-text) (concat prev-text-content this-text-content)))
+         (t
+          (push this-text tspans)))
+        (cond
+         ((not prev-bg)
+          (push this-bg backgrounds))
+         ((equal this-bg-fill prev-bg-fill)
+          (setf prev-bg-attrs (map-put! prev-bg-attrs 'width (+ prev-bg-width this-bg-width))))
+         (t
+          (push this-bg backgrounds)))
+        (setq point next-point)))
+    (edie-ml--text (nreverse tspans) backgrounds)))
 
 (cl-defmethod edie-ml-parse (((_ _ body) (head text)))
-  (let ((tspans nil)
-        (rects nil))
-    (if-let ((intervals (object-intervals body)))
-        (pcase-let* ((`(,from ,to ,(map face)) (car intervals))
-                     (text-attrs (edie-ml--tspan-attributes face))
-                     (text (substring-no-properties body from to))
-                     (rect-attrs (edie-ml--rect-attributes face))
-                     (rect-from from)
-                     (rect-to to)
-                     (str nil))
-          (pcase-dolist (`(,from ,to ,(map face)) (cdr intervals))
-            (setq str (substring-no-properties body from to))
-            (let ((attrs (edie-ml--tspan-attributes face)))
-              (if (equal text-attrs attrs)
-                  (setq text (concat text str))
-                (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans)
-                (setq text-attrs attrs)
-                (setq text str)))
-            (let ((attrs (edie-ml--rect-attributes face)))
-              (if (equal rect-attrs attrs)
-                  (setq rect-to to)
-                (when (alist-get 'fill rect-attrs)
-                  (push `(rect
-                          ,(map-merge
-                            'alist
-                            `((x . ,(* rect-from edie-ml-unit-x))
-                              (y . 0)
-                              (width . ,(format "%dpx" (* (- from rect-from) edie-ml-unit-x)))
-                              (height . "100%"))
-                            rect-attrs))
-                        rects))
-                (setq rect-attrs attrs)
-                (setq rect-from to))))
-          (when rect-attrs
-            (push `(rect
-                    ,(map-merge
-                      'alist
-                      `((x . ,(* rect-from edie-ml-unit-x))
-                        (y . 0)
-                        (width . ,(format "%dpx" (* (- rect-to rect-from) edie-ml-unit-x)))
-                        (height . "100%"))
-                      rect-attrs))
-                  rects))
-          (push `(tspan ,text-attrs ,(xml-escape-string text)) tspans))
-      (push `(tspan nil ,body) tspans))
-    (append
-     (nreverse rects)
-     (list `(text ((width . "100%")
-                   (height . "100%")
-                   (x . 0)
-                   (y . "50%")
-                   ("xml:space" . "preserve"))
-                  ,@(nreverse tspans))))))
+  (edie-ml--string-to-text body))
 
 (provide 'edie-ml)
