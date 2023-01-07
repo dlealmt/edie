@@ -28,8 +28,9 @@
 
 ;;; Code:
 
-(require 'pcase)
-(require 'map)
+(eval-when-compile
+  (require 'map)
+  (require 'pcase))
 
 (defvar edie-ml-icon-directory "~/.cache/material-design/svg")
 
