@@ -101,6 +101,11 @@
              ,retval))
       `(progn ,@body))))
 
+(defun edie-debug (&rest objs)
+  (with-current-buffer (get-buffer-create "*edie-debug*")
+    (insert (format "%S\n" objs))
+    (goto-char (point-max))))
+
 (defun edie-debug--log (fun-name fun args)
   ""
   (let ((buffer (get-buffer-create "*edie-debug*"))
