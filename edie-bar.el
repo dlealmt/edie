@@ -68,10 +68,14 @@
 (define-minor-mode edie-bar-mode
   nil
   :global t
-  (when edie-bar-mode
-    (add-to-list 'set-message-functions #'edie-bar-set-message t)
-    (setq command-error-function #'edie-bar-command-error)
-    (add-function :filter-args completing-read-function #'edie-bar-svg-prompt)))
+  (if edie-bar-mode
+      (progn
+        (add-to-list 'set-message-functions #'edie-bar-set-message t)
+        (setq command-error-function #'edie-bar-command-error)
+        (add-function :filter-args completing-read-function #'edie-bar-svg-prompt))
+    (setq set-message-functions (delq 'edie-bar-set-message set-message-functions))
+    (setq command-error-function #'command-error-default-function)
+    (remove-function completing-read-function #'edie-bar-svg-prompt)))
 
 (defun edie-bar-make-bar (&optional params)
   ""
