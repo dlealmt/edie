@@ -32,6 +32,8 @@
   (require 'map)
   (require 'pcase))
 
+(require 'xml)
+
 (defvar edie-ml-icon-directory "~/.cache/material-design/svg")
 
 (defvar edie-ml-unit-x 10.5)
@@ -145,7 +147,7 @@ so if both are in FACE-ATTRIBUTES, `fill' will be overwritten."
                                  (alignment-baseline . "central"))
                                base-attrs
                                attributes)))
-    (append (list 'tspan svg-attrs) (list (substring-no-properties string)))))
+    (append (list 'tspan svg-attrs) (list (xml-escape-string (substring-no-properties string))))))
 
 (defun edie-ml--text-background (string attributes)
   ""
