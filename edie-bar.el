@@ -109,15 +109,9 @@
 
 (defun edie-bar-vertico-format-count (count)
   ""
-  (with-selected-frame (window-frame (minibuffer-window))
-    (let* ((str (concat count " "))
-           (cw (frame-char-width))
-           (svg (svg-create (* (length str) cw) (frame-pixel-height))))
-      (svg-text svg str :x 0 :y 25
-                :alignment-baseline "middle"
-                :font-family "Ubuntu Mono" :font-size "19")
-      (put-text-property 0 (length str) 'display (svg-image svg) str)
-      str)))
+  (with-selected-frame edie-bar-frame
+    (propertize (substring-no-properties count)
+                'display (edie-ml-render `(:width ,(length count)) `(text ,count)))))
 
 (cl-defun edie-bar-svg-prompt ((str &rest args))
   (with-selected-frame edie-bar-frame
