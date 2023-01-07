@@ -100,14 +100,8 @@
 
 (defun edie-bar-set-message (message)
   ""
-  (with-selected-frame (window-frame (minibuffer-window))
-    (let ((svg (svg-create (frame-pixel-width) (frame-pixel-height))))
-      (svg-text svg message
-                :x 48 :y 25
-                :text-anchor "left" :alignment-baseline "middle"
-                :font-family "Ubuntu Mono" :font-size "20")
-      (put-text-property 0 (length message) 'display (svg-image svg) message))
-    message))
+  (with-selected-frame edie-bar-frame
+    (propertize (substring-no-properties message) 'display (edie-ml-render nil `(text ,message)))))
 
 (defun edie-bar-command-error (data _ _)
   ""
@@ -126,17 +120,11 @@
       str)))
 
 (cl-defun edie-bar-svg-prompt ((str &rest args))
-  (set-text-properties 0 (length str) nil str)
-  (let* ((bw (with-current-buffer (get-buffer-create "*edie-window-pixels*")
-               (delete-region (point-min) (point-max))
-               (insert str)
-               (car (buffer-text-pixel-size nil (minibuffer-window)))))
-         (svg (svg-create bw (frame-pixel-height default-minibuffer-frame))))
-    (svg-text svg str :x 0 :y 25
-              :alignment-baseline "middle"
-              :font-family "Ubuntu Mono" :font-size "19")
-    (put-text-property 0 (length str) 'display (svg-image svg) str)
-    (append (list str) args)))
+  (with-selected-frame edie-bar-frame
+    (append
+     (list (propertize (substring-no-properties str)
+                       'display (edie-ml-render `(:width ,(length str)) `(text ,str))))
+     args)))
 
 (provide 'edie-bar)
 ;;; edie-bar.el ends here
