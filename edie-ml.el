@@ -60,10 +60,7 @@
        (version . "1.1")
        (xmlns . "http://www.w3.org/2000/svg")
        (xmlns:xlink . "http://www.w3.org/1999/xlink"))
-      ,@(let ((parsed (edie-ml-parse (edie-ml-normalize spec))))
-          (if (symbolp (car-safe parsed))
-              (list (car parsed))
-            parsed)))))
+      ,(edie-ml-parse (edie-ml-normalize spec)))))
 
 (defun edie-ml-render (attrs spec)
   (let ((svg (edie-ml attrs spec)))
@@ -122,19 +119,22 @@ so if both are in FACE-ATTRIBUTES, `fill' will be overwritten."
   ""
   (let ((default-attrs (edie-ml--face-attributes-to-svg
                         (face-all-attributes 'default (selected-frame)))))
-    (append
-     backgrounds
-     (list
-      `(text ,(map-merge
-               'alist
-               default-attrs
-               '((width . "100%")
-                 (height . "100%")
-                 (x . 0)
-                 (y . "50%")
-                 (dominant-baseline . "middle")
-                 ("xml:space" . "preserve")))
-             ,@tspans)))))
+    `(g
+      ((width . "100%")
+       (height . "100%")
+       (x . 0)
+       (y . 0))
+      ,@backgrounds
+      (text ,(map-merge
+              'alist
+              default-attrs
+              '((width . "100%")
+                (height . "100%")
+                (x . 0)
+                (y . "50%")
+                (dominant-baseline . "middle")
+                ("xml:space" . "preserve")))
+            ,@tspans))))
 
 (defun edie-ml--text-span (string &optional attributes)
   ""
