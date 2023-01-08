@@ -44,9 +44,9 @@
   (pcase spec
     ((pred stringp) spec)
     ((seq tag (and attrs (guard (keywordp (car-safe attrs)))) &rest children)
-     `(,tag ,attrs ,@(mapcar #'edie-ml-normalize children)))
+     `(,tag ,attrs ,(mapcar #'edie-ml-normalize children)))
     ((seq tag &rest children)
-     `(,tag nil ,@(mapcar #'edie-ml-normalize children)))))
+     `(,tag nil ,(mapcar #'edie-ml-normalize children)))))
 
 (cl-defun edie-ml ((&key (width nil) (height nil)) spec)
   ""
@@ -206,7 +206,7 @@ so if both are in FACE-ATTRIBUTES, `fill' will be overwritten."
         (setq point next-point)))
     (edie-ml--text (nreverse tspans) backgrounds)))
 
-(cl-defmethod edie-ml-parse (((_ _ body) (head text)))
+(cl-defmethod edie-ml-parse (((_ _ (body)) (head text)))
   (edie-ml--string-to-text body))
 
 (provide 'edie-ml)
