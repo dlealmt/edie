@@ -77,16 +77,12 @@
     (setq command-error-function #'command-error-default-function)
     (remove-function completing-read-function #'edie-bar-svg-prompt)))
 
-(defun edie-bar-make-bar (&optional params)
+(defun edie-bar-setup ()
+  (setq minibuffer-frame-alist
+        (map-merge 'alist minibuffer-frame-alist edie-bar-default-frame-alist)))
+
+(defun edie-bar--set-bar ()
   ""
-  (setq default-minibuffer-frame
-        (make-frame-on-display
-         x-display-name
-         (map-merge 'alist
-                    minibuffer-frame-alist
-                    edie-bar-default-frame-alist
-                    params
-                    '((minibuffer . only)))))
   (setq edie-bar-frame default-minibuffer-frame))
 
 (defun edie-bar-resize (frame)
