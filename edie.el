@@ -30,7 +30,6 @@
 
 ;;; Code:
 
-(require 'edie-bar)
 (require 'edie-bar-vertico)
 (require 'edie-debug)
 (require 'edie-keys)
@@ -59,8 +58,6 @@
   :global t
   (when edie-mode
       (progn
-        (add-hook 'edie-bar-mode-hook #'edie-bar-vertico-mode)
-        (add-hook 'before-init-hook #'edie-bar-mode -90)
         (add-hook 'after-init-hook #'edie-bar-set-bar)
         (add-hook 'after-init-hook #'edie-wm-mode 0)
         (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
