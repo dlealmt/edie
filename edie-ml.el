@@ -87,6 +87,14 @@
 
 ;; text
 
+(defun edie-ml--specified-face-attributes (face attribute-filter)
+  ""
+  (let ((all (face-all-attributes face (selected-frame)))
+        (filtered nil))
+    (pcase-dolist (`(,attr . ,val) all filtered)
+      (when (and (not (eq val 'unspecified)) (memq attr attribute-filter))
+        (setf (alist-get attr filtered) val)))))
+
 (defun edie-ml--face-attributes-at (point str attribute-filter)
   "Get a subset of face attributes at POINT in STR.
 
