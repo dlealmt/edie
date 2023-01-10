@@ -58,7 +58,6 @@
   :global t
   (when edie-mode
       (progn
-        (add-hook 'after-init-hook #'edie-bar-set-bar)
         (add-hook 'after-init-hook #'edie-wm-mode 0)
         (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
         (add-hook 'emacs-startup-hook #'edie-keys-mode 0)
