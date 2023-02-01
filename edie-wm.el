@@ -91,6 +91,14 @@
   "Normal hook run after switching virtual desktops."
   :type 'hook)
 
+(defcustom edie-wm-window-focus-change-hook nil
+  "Normal hook run after a window takes focus."
+  :type 'hook)
+
+(defcustom edie-wm-window-update-hook nil
+  "Normal hook run after some significant window property changes."
+  :type 'hook)
+
 (defcustom edie-wm-rules-alist nil
   "Alist of window rules.
 
@@ -355,7 +363,9 @@ Return nil or the list of windows that match the filters."
   (unless (= wid 0)
     (let ((window (alist-get wid edie-wm--window-list)))
       (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-      (setf (alist-get wid edie-wm--window-list) window))))
+      (setf (alist-get wid edie-wm--window-list) window)))
+
+  (run-hooks 'edie-wm-window-focus-change-hook))
 
 (defun edie-wm-on-window-add (window)
   (pcase-let ((`(window ,wid) window))
@@ -399,7 +409,9 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm--on-window-update-1 (wid changes)
   (let* ((window (alist-get wid edie-wm--window-list))
          (props (edie-wm-window-properties window)))
-    (map-do (lambda (k v) (setf props (plist-put props k v))) changes)))
+    (map-do (lambda (k v) (setf props (plist-put props k v))) changes))
+
+  (run-hooks 'edie-wm-window-update-hook))
 
 (defun edie-wm-on-desktop-focus-change ()
   (run-hooks 'edie-wm-desktop-focus-change-hook))
