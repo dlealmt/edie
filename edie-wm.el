@@ -87,7 +87,7 @@
   "The color of inactive window borders."
   :type 'color)
 
-(defcustom edie-wm-desktop-change-hook nil
+(defcustom edie-wm-desktop-focus-change-hook nil
   "Normal hook run after switching virtual desktops."
   :type 'hook)
 
@@ -401,8 +401,8 @@ Return nil or the list of windows that match the filters."
          (props (edie-wm-window-properties window)))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)))
 
-(defun edie-wm-on-desktop-change ()
-  (run-hooks 'edie-wm-desktop-change-hook))
+(defun edie-wm-on-desktop-focus-change ()
+  (run-hooks 'edie-wm-desktop-focus-change-hook))
 
 (cl-defun edie-wm--write-borders ((window plist))
   (pcase-let* (((map (:left wnd-left)
