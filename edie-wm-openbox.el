@@ -100,6 +100,7 @@
   (setq edie-wm-window-list-function #'edie-wm-x11-window-list)
   (setq edie-wm-window-make-function #'edie-wm-x11-window-make)
 
+  (setq edie-wm-x11-on-desktop-change-function #'edie-wm-on-desktop-change)
   (setq edie-wm-x11-on-window-focus-function #'edie-wm-on-window-focus)
   (setq edie-wm-x11-on-window-add-function #'edie-wm-on-window-add)
   (setq edie-wm-x11-on-window-remove-function #'edie-wm-on-window-remove)

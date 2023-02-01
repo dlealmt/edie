@@ -87,6 +87,10 @@
   "The color of inactive window borders."
   :type 'color)
 
+(defcustom edie-wm-desktop-change-hook nil
+  "Normal hook run after switching virtual desktops."
+  :type 'hook)
+
 (defcustom edie-wm-rules-alist nil
   "Alist of window rules.
 
@@ -173,6 +177,10 @@ switch to."
   (pcase (edie-wm-x11-current-desktop)
     ((seq desktop _ id) (seq-elt (edie-wm-desktop-list) id))))
 
+(defun edie-wm-desktop-index (desktop)
+  "Return the index of DESKTOP."
+  (nth 2 desktop))
+
 (defun edie-wm-desktop-make (name id)
   "Make a desktop instance."
   `(desktop (:name ,name) ,id))
@@ -216,6 +224,9 @@ switch to."
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
   (funcall edie-wm-current-window-function))
+
+(defun edie-wm-window-property (window propname)
+  (plist-get (edie-wm-window-properties window) propname))
 
 (defun edie-wm--current-window-1 ()
   "Default implementation for `edie-wm-current-window'."
@@ -389,6 +400,9 @@ Return nil or the list of windows that match the filters."
   (let* ((window (alist-get wid edie-wm--window-list))
          (props (edie-wm-window-properties window)))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)))
+
+(defun edie-wm-on-desktop-change ()
+  (run-hooks 'edie-wm-desktop-change-hook))
 
 (cl-defun edie-wm--write-borders ((window plist))
   (pcase-let* (((map (:left wnd-left)
