@@ -31,31 +31,12 @@ Watch this space.
 ** Requirements
 Edie is quite unstable stll, so if you don't have a reasonable grasp on Emacs Lisp (as I don't, but I'm making an exception for myself here), you should not use it. Unfortunately, I don't have enough time to help you set it up, or to help you debug any issues that don't affect me. *You have been warned!*
 
-That said, feel free to go to Discussions and ask there, if you experience any issues.
-
 Now that that's out of the way, here is what you'll need, depending on which parts you are planning to use:
 
 - Nitrogen (for Edie Wallpaper)
 
 **** Suggestions
 - Picom (for ricing)
-
-** Installation
-Edie is not any of the *ELPAs, therefor the only way to try it right now is to clone this repository. So...
-
-1. ...let's assume you did that:
-   #+BEGIN_EXAMPLE
-   $ git clone https://github.com/dleal-mojotech/edie.git my-awesome-local-dir
-   #+END_EXAMPLE
-
-2. Now, you'll need to add the following to your emacs init file:
-   #+BEGIN_EXAMPLE
-   (add-to-list 'load-path "/path/to/my-awesome-local-dir")
-   (require 'edie)
-   #+END_EXAMPLE
-
-** Configuration
-Customize the group =edie= to see all the options that are currently available.
 
 ** Contributing
 I'm not accepting PRs at the moment, but feel free to open issues, even though I can't guarantee I'll get to them any time soon.
