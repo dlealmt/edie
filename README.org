@@ -16,6 +16,9 @@ The following components exist:
 *** [[https://github.com/dleal-mojotech/edie-wm][Edie WM]]
 This is a wrapper around Openbox (or any other EWMH-compliant window manager, but I haven't tested that).
 
+*** [[https://github.com/dleal-mojotech/edie-bar][Edie Bar]]
+A panel/launcher combination.
+
 *** Edie Wallpaper
 A simple library to rotate all the backgrounds in a directory.
 
