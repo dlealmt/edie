@@ -36,7 +36,6 @@
 (require 'edie-redshift)
 (require 'edie-run)
 (require 'edie-wallpaper)
-(require 'edie-wm)
 
 (defgroup edie nil
   "Settings related to Edie and its components."
@@ -58,7 +57,6 @@
   :global t
   (when edie-mode
       (progn
-        (add-hook 'after-init-hook #'edie-wm-mode 0)
         (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
         (add-hook 'emacs-startup-hook #'edie-keys-mode 0)
         (add-hook 'emacs-startup-hook #'edie-redshift-mode 90)

@@ -11,9 +11,9 @@ Current status:
 Edie aspires to be give you, dear Emacs user, a set of utilities resembling what youwhat you would get if you used a full blown desktop environment like GNOME, KDE, Xfce, etc, while letting you control all of what it provides from the comfort of Emacs itself.
 
 ** Components
-The following components are currently present in this repository:
+The following components exist:
 
-*** Edie WM
+*** [[https://github.com/dleal-mojotech/edie-wm][Edie WM]]
 This is a wrapper around Openbox (or any other EWMH-compliant window manager, but I haven't tested that).
 
 *** Edie Wallpaper
@@ -32,8 +32,6 @@ That said, feel free to go to Discussions and ask there, if you experience any i
 
 Now that that's out of the way, here is what you'll need, depending on which parts you are planning to use:
 
-- Openbox (for Edie WM)
-- XELB (for Edie WM)
 - Nitrogen (for Edie Wallpaper)
 
 **** Suggestions
