@@ -155,6 +155,7 @@
   (pcase char
     (";" "semicolon")
     ("<c-i>" "C-i")
+    ("SPC" "space")
     (_ char)))
 
 (defun edie-wm-openbox--key-description (key)
@@ -169,7 +170,7 @@
            (opt (let mod3 modifier) "-")
            (? "<")
            (opt (let mod4 modifier) "-")
-           (let char anything)
+           (let char (+ anything))
            (? ">")
            string-end)
        (concat
