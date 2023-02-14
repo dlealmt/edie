@@ -226,12 +226,13 @@ switch to."
 (defun edie-wm-window-close (&optional window)
   "Close the active window."
   (interactive)
-  (funcall edie-wm-window-close-function (or window (edie-wm-current-window))))
+  (when-let ((w (or window (edie-wm-current-window))))
+    (funcall edie-wm-window-close-function w)))
 
 (defun edie-wm-window-to-desktop (desktop &optional window)
   "Send WINDOW to DESKTOP."
   (interactive (list (edie-wm-select-desktop)))
-  (let ((window (or window (edie-wm-current-window))))
+  (when-let ((window (or window (edie-wm-current-window))))
     (edie-wm-update-window window (list :desktop desktop))))
 
 (defun edie-wm-current-window ()
@@ -481,7 +482,8 @@ Return nil or the list of windows that match the filters."
       (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
-  (edie-wm-tile-window-tile (edie-wm-current-window)))
+  (when-let ((w (edie-wm-current-window)))
+    (edie-wm-tile-window-tile w)))
 
 (defun edie-wm-tile-window-tile (window)
   (pcase-let (((seq 'window _ (map :left :top :width :height)) window))
@@ -496,7 +498,8 @@ Return nil or the list of windows that match the filters."
     (edie-wm-window-filter-list `(:desktop ,desktop-id ,@geom))))
 
 (defun edie-wm-tile-fit (tile &optional window)
-  (edie-wm-update-window (or window (edie-wm-current-window)) (edie-wm-tile--spec tile)))
+  (when-let ((w (or window (edie-wm-current-window))))
+    (edie-wm-update-window w (edie-wm-tile--spec tile))))
 
 (defun edie-wm-tile--geometries ()
   (map-apply (lambda (k v) `(,k . ,(edie-wm-geometry v))) edie-wm-tile-alist))
