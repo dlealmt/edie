@@ -199,6 +199,7 @@ switch to."
   `(desktop (:name ,name) ,id))
 
 (defun edie-wm-focus-window (window)
+  "Focus WINDOW."
   (funcall edie-wm-focus-window-function window))
 
 (defun edie-wm-window-id (window)
@@ -224,7 +225,7 @@ switch to."
     (map-elt indexed (completing-read "Window: " indexed))))
 
 (defun edie-wm-window-close (&optional window)
-  "Close the active window."
+  "Close the active window or WINDOW."
   (interactive)
   (when-let ((w (or window (edie-wm-current-window))))
     (funcall edie-wm-window-close-function w)))
@@ -240,6 +241,7 @@ switch to."
   (funcall edie-wm-current-window-function))
 
 (defun edie-wm-window-property (window propname)
+  "Return the value of the property PROPNAME for WINDOW."
   (plist-get (edie-wm-window-properties window) propname))
 
 (defun edie-wm--current-window-1 ()
@@ -247,6 +249,7 @@ switch to."
   (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
 
 (defun edie-wm-window (filters)
+  "Return the first window that matches FILTERS."
   (seq-find (lambda (wnd) (edie-wm-window-filter-match-p filters wnd)) (edie-wm-window-list)))
 
 (defun edie-wm-window-alist ()
@@ -470,6 +473,7 @@ Return nil or the list of windows that match the filters."
         window))
 
 (defun edie-wm-tile-focus-cycle (tile)
+  "Cycle focus between windows in TILE."
   (if (eq (edie-wm-tile-current-tile) tile)
       (let* ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
              (window (car (reverse windows))))
@@ -477,15 +481,18 @@ Return nil or the list of windows that match the filters."
     (edie-wm-tile-focus-tile tile)))
 
 (defun edie-wm-tile-focus-tile (tile)
+  "Focus the topmost window of TILE."
   (let* ((desktop (edie-wm-current-desktop)))
     (when-let ((window (car (edie-wm-tile-window-list desktop tile))))
       (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
+  "Return the tile that the currently focused window is in."
   (when-let ((w (edie-wm-current-window)))
     (edie-wm-tile-window-tile w)))
 
 (defun edie-wm-tile-window-tile (window)
+  "Return the tile that WINDOW is in."
   (pcase-let (((seq 'window _ (map :left :top :width :height)) window))
     (car-safe (seq-find
                (pcase-lambda (`(,_ . ,(map (:left tl) (:top tt) (:width tw) (:height th))))
@@ -493,18 +500,22 @@ Return nil or the list of windows that match the filters."
                (edie-wm-tile--geometries)))))
 
 (defun edie-wm-tile-window-list (desktop tile)
+  "Return a list of windows in tile TILE of DESKTOP."
   (pcase-let* (((seq 'desktop _ desktop-id) desktop)
                (geom (edie-wm-geometry (edie-wm-tile--spec tile))))
     (edie-wm-window-filter-list `(:desktop ,desktop-id ,@geom))))
 
 (defun edie-wm-tile-fit (tile &optional window)
+  "Fit WINDOW to TILE's dimensions."
   (when-let ((w (or window (edie-wm-current-window))))
     (edie-wm-update-window w (edie-wm-tile--spec tile))))
 
 (defun edie-wm-tile--geometries ()
+  "Return an alist of tiles and their geometries."
   (map-apply (lambda (k v) `(,k . ,(edie-wm-geometry v))) edie-wm-tile-alist))
 
 (defun edie-wm-tile--spec (tile)
+  "Return the tile specification for TILE."
   (cl-assert tile)
 
   (let* ((spec (map-elt edie-wm-tile-alist tile)))
