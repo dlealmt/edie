@@ -467,10 +467,25 @@ Return nil or the list of windows that match the filters."
             edie-wm-rules-alist))
 
 (cl-defun edie-wm-tile-maybe-tile ((rules window))
-  (list (if-let ((tile (map-elt rules :tile)))
-            (map-merge 'plist rules (edie-wm-tile--spec tile))
-          rules)
-        window))
+  "Tile WINDOW if it matches RULES."
+  (list
+   (if-let ((tile (map-elt rules :tile)))
+       (let ((tiles (ensure-list tile)))
+         (map-merge
+          'plist
+          rules
+          (edie-wm-tile--spec
+           (if (memq (edie-wm-tile-current-tile) tiles)
+               (edie-wm-tile-current-tile)
+             (if-let ((tile (seq-find (lambda (tile)
+                                        (null
+                                         (edie-wm-tile-window-list
+                                          (edie-wm-current-desktop) tile)))
+                                      tiles)))
+                 tile
+               (car tiles))))))
+     rules)
+   window))
 
 (defun edie-wm-tile-focus-cycle (tile)
   "Cycle focus between windows in TILE."
