@@ -351,8 +351,10 @@ Return nil or the list of windows that match the filters."
                  (* fraction total))
                 ((and `(/ ,(and slice (pred numberp)) ,(and whole (pred numberp)))
                       (guard (<= slice whole)))
-                 (* (/ slice (float whole)) total)))))
-    (cl-assert (and (numberp size) (<= size total)))
+                 (* (/ slice (float whole)) total))
+                ((seq '+ &rest operands)
+                 (apply #'+ (mapcar (lambda (n) (edie-wm-unit-pixel n total)) operands))))))
+    (cl-assert (numberp size))
 
     (truncate size)))
 
