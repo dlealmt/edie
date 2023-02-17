@@ -369,11 +369,9 @@ Return nil or the list of windows that match the filters."
   (funcall edie-wm-on-window-focus-function wid))
 
 (defun edie-wm--on-window-focus-1 (wid)
-  (when-let (((/= wid 0))
+  (when (and (/= wid 0)
              ;; sometimes we get an id, but we don't have a window
-             (window (alist-get wid edie-wm--window-list)))
-    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-    (setf (alist-get wid edie-wm--window-list) window)
+             (alist-get wid edie-wm--window-list))
     (setq edie-wm--current-window-id wid))
 
   (run-hooks 'edie-wm-window-focus-change-hook))
