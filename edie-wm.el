@@ -38,7 +38,6 @@
 (defvar edie-wm-window-close-function nil)
 (defvar edie-wm-window-list-function nil)
 
-(defvar edie-wm-current-window-function #'edie-wm--current-window-1)
 (defvar edie-wm-workarea-function #'edie-wm-screenarea)
 (defvar edie-wm-geometry-function #'edie-wm-geometry-1)
 
@@ -246,15 +245,11 @@ switch to."
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
-  (funcall edie-wm-current-window-function))
+  (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
 
 (defun edie-wm-window-property (window propname)
   "Return the value of the property PROPNAME for WINDOW."
   (plist-get (edie-wm-window-properties window) propname))
-
-(defun edie-wm--current-window-1 ()
-  "Default implementation for `edie-wm-current-window'."
-  (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
 
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
