@@ -50,6 +50,8 @@
 
 (defvar edie-wm--window-list nil)
 
+(defvar edie-wm--current-window-id nil)
+
 (defconst edie-wm--window-properties-slot 2)
 
 (defgroup edie-wm nil
@@ -160,7 +162,9 @@ will be applied to windows matched by FILTERS."
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
       (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
 
-      (funcall start-fn))))
+      (funcall start-fn)
+
+      (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function)))))
 
 
 (defun edie-wm-current-desktop ()
@@ -245,7 +249,7 @@ switch to."
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
-  (map-elt edie-wm--window-list (funcall edie-wm-current-window-id-function)))
+  (map-elt edie-wm--window-list edie-wm--current-window-id))
 
 (defun edie-wm-window-property (window propname)
   "Return the value of the property PROPNAME for WINDOW."
@@ -369,7 +373,8 @@ Return nil or the list of windows that match the filters."
              ;; sometimes we get an id, but we don't have a window
              (window (alist-get wid edie-wm--window-list)))
     (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-    (setf (alist-get wid edie-wm--window-list) window))
+    (setf (alist-get wid edie-wm--window-list) window)
+    (setq edie-wm--current-window-id wid))
 
   (run-hooks 'edie-wm-window-focus-change-hook))
 
