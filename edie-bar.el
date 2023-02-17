@@ -42,7 +42,8 @@
 
 (defcustom edie-bar-spec nil
   ""
-  :type 'sexp)
+  :type 'sexp
+  :group 'edie-bar)
 
 (defcustom edie-bar-default-frame-alist
   '((border-width . 0)
