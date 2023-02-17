@@ -112,10 +112,14 @@ FILTERS is a plist, where each keyword corresponds to a window
 attribute which will be used to match against windows.
 
 ATTRIBUTES is a plist, where each keyword is an attribute that
-will be applied to windows matched by FILTERS.")
+will be applied to windows matched by FILTERS."
+  :type '(alist
+          :key-type (plist :key-type keyword :value-type string)
+          :value-type (plist :key-type keyword :value-type string)))
 
 (defcustom edie-wm-tile-alist nil
-  "Alist of tiles.")
+  "Alist of tiles."
+  :type '(alist :key-type keyword :value-type sexp))
 
 (defcustom edie-wm-tile-commands nil
   "Tile commands to be auto-generated."
