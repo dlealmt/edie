@@ -150,6 +150,7 @@ will be applied to windows matched by FILTERS.")
       (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
       (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
       (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
+      (add-function :filter-return edie-wm-on-window-update-function #'edie-wm--apply-rules)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
       (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
 
@@ -392,9 +393,11 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm--on-window-update-1 (wid changes)
   (let* ((window (alist-get wid edie-wm--window-list))
          (props (edie-wm-window-properties window)))
-    (map-do (lambda (k v) (setf props (plist-put props k v))) changes))
+    (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
 
-  (run-hooks 'edie-wm-window-update-hook))
+    (run-hooks 'edie-wm-window-update-hook)
+
+    window))
 
 (defun edie-wm-on-desktop-focus-change ()
   (run-hooks 'edie-wm-desktop-focus-change-hook))
