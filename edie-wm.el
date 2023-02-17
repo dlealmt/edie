@@ -26,6 +26,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'map))
+
 (defvar edie-wm-current-desktop-function nil)
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-set-desktop-function nil)
