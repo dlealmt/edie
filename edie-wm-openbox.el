@@ -156,6 +156,10 @@
     (";" "semicolon")
     ("<c-i>" "C-i")
     ("SPC" "space")
+    ("<XF86AudioMute>" "XF86AudioMute")
+    ("<XF86AudioRaiseVolume>" "XF86AudioRaiseVolume")
+    ("<XF86AudioLowerVolume>" "XF86AudioLowerVolume")
+    ("<XF86AudioMicMute>" "XF86AudioMicMute")
     (_ char)))
 
 (defun edie-wm-openbox--key-description (key)
@@ -163,7 +167,7 @@
   (rx-let ((modifier (or "control" "s" "C" "M" "S")))
     (pcase (single-key-description key)
       ((rx string-start
-           (let mod1 modifier) "-"
+           (opt (let mod1 modifier) "-")
            (? "<")
            (opt (let mod2 modifier) "-")
            (? "<")
@@ -174,7 +178,7 @@
            (? ">")
            string-end)
        (concat
-        (edie-wm-openbox--mod-description mod1) "-"
+        (if mod1 (concat (edie-wm-openbox--mod-description mod1) "-") "")
         (if mod2 (concat (edie-wm-openbox--mod-description mod2) "-") "")
         (if mod3 (concat (edie-wm-openbox--mod-description mod3) "-") "")
         (if mod4 (concat (edie-wm-openbox--mod-description mod4) "-") "")
