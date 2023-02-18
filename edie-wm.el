@@ -88,23 +88,23 @@
   "The color of inactive window borders."
   :type 'color)
 
-(defcustom edie-wm-desktop-focus-change-hook nil
+(defcustom edie-wm-desktop-focus-changed-hook nil
   "Normal hook run after switching virtual desktops."
   :type 'hook)
 
-(defcustom edie-wm-window-focus-change-hook nil
+(defcustom edie-wm-window-focus-changed-hook nil
   "Normal hook run after a window takes focus."
   :type 'hook)
 
-(defcustom edie-wm-window-add-hook nil
+(defcustom edie-wm-window-added-hook nil
   "Normal hook run after a window is created and mapped."
   :type 'hook)
 
-(defcustom edie-wm-window-update-hook nil
+(defcustom edie-wm-window-updated-hook nil
   "Normal hook run after some significant window property changes."
   :type 'hook)
 
-(defcustom edie-wm-window-close-hook nil
+(defcustom edie-wm-window-closed-hook nil
   "Normal hook run after a window is closed."
   :type 'hook)
 
@@ -158,11 +158,11 @@ will be applied to windows matched by FILTERS."
       (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
 
-      (add-hook 'edie-wm-window-add-hook #'edie-wm--apply-rules -90)
-      (add-hook 'edie-wm-window-add-hook #'edie-wm-tile-maybe-tile)
+      (add-hook 'edie-wm-window-added-hook #'edie-wm--apply-rules -90)
+      (add-hook 'edie-wm-window-added-hook #'edie-wm-tile-maybe-tile)
 
-      (add-hook 'edie-wm-window-update-hook #'edie-wm--apply-rules -90)
-      (add-hook 'edie-wm-window-update-hook #'edie-wm-tile-maybe-tile)
+      (add-hook 'edie-wm-window-updated-hook #'edie-wm--apply-rules -90)
+      (add-hook 'edie-wm-window-updated-hook #'edie-wm-tile-maybe-tile)
 
       (funcall start-fn)
 
@@ -373,7 +373,7 @@ Return nil or the list of windows that match the filters."
              (alist-get wid edie-wm--window-list))
     (setq edie-wm--current-window-id wid))
 
-  (run-hooks 'edie-wm-window-focus-change-hook))
+  (run-hooks 'edie-wm-window-focus-changed-hook))
 
 (defun edie-wm-on-window-add (window)
   (pcase-let ((`(window ,wid) window))
@@ -385,7 +385,7 @@ Return nil or the list of windows that match the filters."
     (setf (map-elt edie-wm--window-list wid) window)
 
     (let ((edie-wm--current-window-id wid))
-      (run-hooks 'edie-wm-window-add-hook)
+      (run-hooks 'edie-wm-window-added-hook)
 
       ;; TODO Remove once the hook is properly in place
       window)))
@@ -396,7 +396,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm--on-window-remove-1 (wid)
   (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-  (run-hooks 'edie-wm-window-close-hook))
+  (run-hooks 'edie-wm-window-closed-hook))
 
 (defun edie-wm-on-window-update (wid changes)
   (funcall edie-wm-on-window-update-function wid changes))
@@ -408,12 +408,12 @@ Return nil or the list of windows that match the filters."
          (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
 
-    (run-hooks 'edie-wm-window-update-hook)
+    (run-hooks 'edie-wm-window-updated-hook)
 
     window))
 
 (defun edie-wm-on-desktop-focus-change ()
-  (run-hooks 'edie-wm-desktop-focus-change-hook))
+  (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
 (defun edie-wm--adjust-workarea (workarea)
   (pcase-let* (((map (:left p-left)

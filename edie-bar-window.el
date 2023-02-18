@@ -30,9 +30,9 @@
 
 (cl-defmethod edie-widget-render ((_ (head window)) update)
   ""
-  (add-hook 'edie-wm-window-focus-change-hook update)
-  (add-hook 'edie-wm-window-update-hook update)
-  (add-hook 'edie-wm-window-close-hook update)
+  (add-hook 'edie-wm-window-focus-changed-hook update)
+  (add-hook 'edie-wm-window-updated-hook update)
+  (add-hook 'edie-wm-window-closed-hook update)
 
   `(box nil
      (text nil ,(if-let ((window (edie-wm-current-window)))

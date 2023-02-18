@@ -46,7 +46,7 @@
 
 (cl-defmethod edie-widget-render ((widget (head desktop-list)) update)
   ""
-  (add-hook 'edie-wm-desktop-focus-change-hook update)
+  (add-hook 'edie-wm-desktop-focus-changed-hook update)
 
   (let ((desktop-index (edie-wm-desktop-index (edie-wm-current-desktop)))
         used-desktops)
