@@ -167,7 +167,6 @@ will be applied to windows matched by FILTERS."
       (funcall start-fn)
 
       (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function)))))
-
 
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
