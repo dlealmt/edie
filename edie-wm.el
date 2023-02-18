@@ -390,10 +390,10 @@ Return nil or the list of windows that match the filters."
       window)))
 
 (defun edie-wm-on-window-remove (wid)
-  (let ((window (alist-get wid edie-wm--window-list)))
-    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
+  (when-let ((window (alist-get wid edie-wm--window-list)))
+    (run-hooks 'edie-wm-window-closed-hook)
 
-    (run-hooks 'edie-wm-window-closed-hook)))
+    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)))
 
 (defun edie-wm-on-window-update (wid changes)
   (funcall edie-wm-on-window-update-function wid changes))
