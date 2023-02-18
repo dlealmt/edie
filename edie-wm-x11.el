@@ -99,13 +99,6 @@
   (let ((id (if (= did edie-wm-x11-sticky) t did)))
     `(desktop (:id ,id) ,id)))
 
-(defun edie-wm-x11-window->border-width (wid)
-  (edie-wm-x11-> 'xcb:ewmh:get-_NET_FRAME_EXTENTS :window wid))
-
-(defun edie-wm-x11-window<-border-width (req)
-  (with-slots (top right bottom left) (edie-wm-x11<- req)
-    (list :top top :right right :bottom bottom :left left)))
-
 (defun edie-wm-x11->window-state (wid)
   (edie-wm-x11->property '_NET_WM_STATE wid))
 
