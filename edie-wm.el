@@ -41,7 +41,6 @@
 (defvar edie-wm-workarea-function #'edie-wm-screenarea)
 (defvar edie-wm-geometry-function #'edie-wm-geometry-1)
 
-(defvar edie-wm-on-window-focus-function #'edie-wm--on-window-focus-1)
 (defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
 (defvar edie-wm-on-window-remove-function #'edie-wm--on-window-remove-1)
 (defvar edie-wm-on-window-update-function #'edie-wm--on-window-update-1)
@@ -366,9 +365,6 @@ Return nil or the list of windows that match the filters."
     (truncate size)))
 
 (defun edie-wm-on-window-focus (wid)
-  (funcall edie-wm-on-window-focus-function wid))
-
-(defun edie-wm--on-window-focus-1 (wid)
   (when (and (/= wid 0)
              ;; sometimes we get an id, but we don't have a window
              (alist-get wid edie-wm--window-list))

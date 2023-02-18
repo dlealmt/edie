@@ -39,7 +39,6 @@
 (defconst edie-wm-x11-sticky #xffffffff)
 
 (defvar edie-wm-x11-on-desktop-focus-change-function nil)
-(defvar edie-wm-x11-on-window-focus-function nil)
 (defvar edie-wm-x11-on-window-add-function nil)
 (defvar edie-wm-x11-on-window-remove-function nil)
 (defvar edie-wm-x11-on-window-update-function nil)
@@ -316,7 +315,7 @@
             (dolist (wid removed)
               (funcall edie-wm-x11-on-window-remove-function wid)))))
        ((= atom xcb:Atom:_NET_ACTIVE_WINDOW)
-        (funcall edie-wm-x11-on-window-focus-function (edie-wm-x11-current-window-id)))
+        (edie-wm-on-window-focus (edie-wm-x11-current-window-id)))
        ((= atom xcb:Atom:_NET_CURRENT_DESKTOP)
         (funcall edie-wm-x11-on-desktop-focus-change-function))))))
 
