@@ -156,8 +156,6 @@ will be applied to windows matched by FILTERS."
       (require backend)
 
       (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
-      (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
-      (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
 
       (add-hook 'edie-wm-window-add-hook #'edie-wm--apply-rules -90)
@@ -322,11 +320,12 @@ Return nil or the list of windows that match the filters."
          (or (not fwidth) (equal fwidth wwidth)))))
 
 (defun edie-wm-update-window (window plist)
-  (pcase-let (((seq 'window wid) window))
+  (pcase-let (((seq 'window wid (map :undecorated)) window))
     (setf (map-elt edie-wm--window-list wid)
           (funcall edie-wm-update-window-function
                    window
-                   (map-merge 'plist plist (edie-wm-geometry plist))))))
+                   (map-merge 'plist plist (edie-wm-geometry plist)
+                              `(:border ,(if undecorated 0 edie-wm-window-border-width)))))))
 
 (defun edie-wm-workarea ()
   (funcall edie-wm-workarea-function))
@@ -417,30 +416,6 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-desktop-focus-change ()
   (run-hooks 'edie-wm-desktop-focus-change-hook))
 
-(cl-defun edie-wm--write-borders ((window plist))
-  (pcase-let* (((map (:left wnd-left)
-                     (:top wnd-top)
-                     (:width wnd-width)
-                     (:height wnd-height)
-                     (:type type))
-                plist)
-               (`(,b-left ,b-right ,b-top ,b-bot)
-                (make-list 4 edie-wm-window-border-width)))
-    (if (and (not (eq type 'dock)) wnd-left wnd-top wnd-width wnd-height)
-        (list window
-              (map-merge 'plist plist
-                         (list :left wnd-left
-                               :top wnd-top
-                               :width (- wnd-width b-right b-left)
-                               :height (- wnd-height b-top b-bot))))
-      (list window plist))))
-
-(defun edie-wm--read-borders (window)
-  (pcase-let* ((`(window ,wid ,(and props (map :left :top :width :height))) window)
-               (`(,b-left ,b-right ,b-top ,b-bot) (make-list 4 edie-wm-window-border-width)))
-    (list 'window wid (map-merge 'plist props `(:width ,(+ width b-left b-right)
-                                                :height ,(+ height b-top b-bot))))))
-
 (defun edie-wm--adjust-workarea (workarea)
   (pcase-let* (((map (:left p-left)
                      (:top p-top)

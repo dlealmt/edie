@@ -262,7 +262,7 @@
 
 (defun edie-wm-x11-window-update-geometry (window plist)
   (pcase-let* ((`(window ,wid ,_) window)
-               ((map :left :top :width :height) plist))
+               ((map :left :top :width :height :border) plist))
     (cl-assert (and wid (numberp left) (numberp top) (numberp width) (numberp height)))
 
     (edie-wm-x11-dispatch 'xcb:ConfigureWindow
@@ -271,7 +271,8 @@
                                           xcb:ConfigWindow:Y
                                           xcb:ConfigWindow:Width
                                           xcb:ConfigWindow:Height)
-                      :x left :y top :width width :height height)))
+                      :x left :y top
+                      :width (- width (* 2 border)) :height (- height (* 2 border)))))
 
 (defun edie-wm-x11-window-update-desktop (window desktop-id)
   (pcase-let* (((seq 'window wid) window))
