@@ -169,8 +169,7 @@
 
 (cl-defmethod edie-widget-svg ((node (head box)))
   ""
-  (let ((width (edie-widget-width node))
-        x transform)
+  (let ((width (edie-widget-width node)))
     (edie-widget--make-svg-node
      (map-merge
       'alist
