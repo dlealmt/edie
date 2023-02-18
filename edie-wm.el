@@ -45,8 +45,6 @@
 (defvar edie-wm-on-window-remove-function #'edie-wm--on-window-remove-1)
 (defvar edie-wm-on-window-update-function #'edie-wm--on-window-update-1)
 
-(defvar edie-wm--apply-rules-function #'edie-wm--apply-rules-1)
-
 (defvar edie-wm--window-list nil)
 
 (defvar edie-wm--current-window-id nil)
@@ -160,11 +158,12 @@ will be applied to windows matched by FILTERS."
       (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
       (add-function :filter-args edie-wm-update-window-function #'edie-wm--write-borders)
       (add-function :filter-return edie-wm-update-window-function #'edie-wm--read-borders)
-      (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
-      (add-function :filter-return edie-wm-on-window-update-function #'edie-wm--apply-rules)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
 
+      (add-hook 'edie-wm-window-add-hook #'edie-wm--apply-rules -90)
       (add-hook 'edie-wm-window-add-hook #'edie-wm-tile-maybe-tile)
+
+      (add-hook 'edie-wm-window-update-hook #'edie-wm--apply-rules -90)
       (add-hook 'edie-wm-window-update-hook #'edie-wm-tile-maybe-tile)
 
       (funcall start-fn)
@@ -474,12 +473,10 @@ Return nil or the list of windows that match the filters."
                            :height (- wnd-height wnd-m-top wnd-m-bot)))
         plist))))
 
-(defun edie-wm--apply-rules (window)
-  (when-let ((rules (edie-wm--find-rule window)))
-    (funcall edie-wm--apply-rules-function rules window)))
-
-(defun edie-wm--apply-rules-1 (rules window)
-  (edie-wm-update-window window rules))
+(defun edie-wm--apply-rules ()
+  (when-let ((window (edie-wm-current-window))
+             (rules (edie-wm--find-rule window)))
+    (edie-wm-update-window window rules)))
 
 (defun edie-wm--find-rule (window)
   (cdr (seq-find (pcase-lambda (`(,filter . ,_))
