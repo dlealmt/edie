@@ -31,20 +31,18 @@
 (require 'dom)
 (require 'edie-widget)
 
-(defvar edie-clock--timer nil)
-
-(defconst edie-clock--numbers
-  ["twelve" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" "ten" "eleven"])
-
 (cl-defmethod edie-widget-render (((&whole clock _ attributes &rest) (head clock)) update)
   ""
-  (unless edie-clock--timer
-    (setq edie-clock--timer (run-with-timer 1 1 update)))
+  (add-hook 'edie-bar-tick-hook update)
+
   (pcase-let (((map format icon) attributes))
     `(box ,attributes
        ,(when icon
           `(icon ((name . ,(edie-clock--icon icon)))))
        (text nil ,(format-time-string format)))))
+
+(defconst edie-clock--numbers
+  ["twelve" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" "ten" "eleven"])
 
 (defun edie-clock--icon (icon)
   ""

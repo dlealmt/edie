@@ -70,14 +70,31 @@
   :type '(alist :key-type symbol)
   :group 'edie-bar)
 
+(defcustom edie-bar-tick-hook nil
+  "Hook run after each tick."
+  :type 'hook
+  :group 'edie-bar)
+
+(defvar edie-bar--tick-timer nil)
+
 ;;;###autoload
 (define-minor-mode edie-bar-mode
   nil
   :global t
+  (when edie-bar--tick-timer
+    (cancel-timer edie-bar--tick-timer)
+    (setq edie-bar--tick-timer nil))
+
   (when edie-bar-mode
     (with-selected-frame default-minibuffer-frame
       (with-current-buffer (window-buffer (frame-root-window))
-        (edie-widget-render-to (selected-frame) edie-bar-spec)))))
+        (edie-widget-render-to (selected-frame) edie-bar-spec)))
+
+    (setq edie-bar--tick-timer (run-with-timer 0 1 #'edie-bar--tick))))
+
+(defun edie-bar--tick ()
+  "Run the tick hook."
+  (run-hooks 'edie-bar-tick-hook))
 
 (defun edie-bar-setup-frame (display &optional parameters)
   ""
