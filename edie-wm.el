@@ -460,17 +460,16 @@ Return nil or the list of windows that match the filters."
         plist))))
 
 (defun edie-wm--apply-rules (window)
-  (let* ((match (edie-wm--find-rule window)))
-    (when-let ((rules (cdr match)))
-      (funcall edie-wm--apply-rules-function rules window))))
+  (when-let ((rules (edie-wm--find-rule window)))
+    (funcall edie-wm--apply-rules-function rules window)))
 
 (defun edie-wm--apply-rules-1 (rules window)
   (edie-wm-update-window window rules))
 
 (defun edie-wm--find-rule (window)
-  (seq-find (pcase-lambda (`(,filter . ,_))
-              (edie-wm-window-filter-match-p filter window))
-            edie-wm-rules-alist))
+  (cdr (seq-find (pcase-lambda (`(,filter . ,_))
+                   (edie-wm-window-filter-match-p filter window))
+                 edie-wm-rules-alist)))
 
 (cl-defun edie-wm-tile-maybe-tile ((rules window))
   "Tile WINDOW if it matches RULES."
