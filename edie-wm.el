@@ -98,6 +98,10 @@
   "Normal hook run after a window takes focus."
   :type 'hook)
 
+(defcustom edie-wm-window-add-hook nil
+  "Normal hook run after a window is created and mapped."
+  :type 'hook)
+
 (defcustom edie-wm-window-update-hook nil
   "Normal hook run after some significant window property changes."
   :type 'hook)
@@ -159,7 +163,9 @@ will be applied to windows matched by FILTERS."
       (add-function :after edie-wm-on-window-add-function #'edie-wm--apply-rules)
       (add-function :filter-return edie-wm-on-window-update-function #'edie-wm--apply-rules)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
-      (add-function :filter-args edie-wm--apply-rules-function #'edie-wm-tile-maybe-tile)
+
+      (add-hook 'edie-wm-window-add-hook #'edie-wm-tile-maybe-tile)
+      (add-hook 'edie-wm-window-update-hook #'edie-wm-tile-maybe-tile)
 
       (funcall start-fn)
 
@@ -377,8 +383,15 @@ Return nil or the list of windows that match the filters."
     (funcall edie-wm-on-window-add-function window)))
 
 (defun edie-wm--on-window-add-1 (window)
+  ;; TODO ensure that window still exists
   (pcase-let (((seq 'window wid) window))
-    (setf (map-elt edie-wm--window-list wid) window)))
+    (setf (map-elt edie-wm--window-list wid) window)
+
+    (let ((edie-wm--current-window-id wid))
+      (run-hooks 'edie-wm-window-add-hook)
+
+      ;; TODO Remove once the hook is properly in place
+      window)))
 
 (defun edie-wm-on-window-remove (wid)
   (let ((window (alist-get wid edie-wm--window-list)))
@@ -392,8 +405,10 @@ Return nil or the list of windows that match the filters."
   (funcall edie-wm-on-window-update-function wid changes))
 
 (defun edie-wm--on-window-update-1 (wid changes)
+  ;; TODO: check if window exists
   (let* ((window (alist-get wid edie-wm--window-list))
-         (props (edie-wm-window-properties window)))
+         (props (edie-wm-window-properties window))
+         (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
 
     (run-hooks 'edie-wm-window-update-hook)
@@ -471,26 +486,22 @@ Return nil or the list of windows that match the filters."
                    (edie-wm-window-filter-match-p filter window))
                  edie-wm-rules-alist)))
 
-(cl-defun edie-wm-tile-maybe-tile ((rules window))
+(cl-defun edie-wm-tile-maybe-tile ()
   "Tile WINDOW if it matches RULES."
-  (list
-   (if-let ((tile (map-elt rules :tile)))
-       (let ((tiles (ensure-list tile)))
-         (map-merge
-          'plist
-          rules
-          (edie-wm-tile--spec
-           (if (memq (edie-wm-tile-current-tile) tiles)
-               (edie-wm-tile-current-tile)
-             (if-let ((tile (seq-find (lambda (tile)
-                                        (null
-                                         (edie-wm-tile-window-list
-                                          (edie-wm-current-desktop) tile)))
-                                      tiles)))
-                 tile
-               (car tiles))))))
-     rules)
-   window))
+  (when-let ((window (edie-wm-current-window))
+             (rules (edie-wm--find-rule window))
+             (tile (map-elt rules :tile))
+             (desktop (edie-wm-current-desktop))
+             (tiles (ensure-list tile)))
+    (edie-wm-tile-fit
+     (if (memq (edie-wm-tile-current-tile) tiles)
+         (edie-wm-tile-current-tile)
+       (if-let ((tile (seq-find (lambda (tile)
+                                  (null (edie-wm-tile-window-list desktop tile)))
+                                tiles)))
+           tile
+         (car tiles)))
+     window)))
 
 (defun edie-wm-tile-focus-cycle (tile)
   "Cycle focus between windows in TILE."
