@@ -42,7 +42,6 @@
 (defvar edie-wm-geometry-function #'edie-wm-geometry-1)
 
 (defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
-(defvar edie-wm-on-window-remove-function #'edie-wm--on-window-remove-1)
 (defvar edie-wm-on-window-update-function #'edie-wm--on-window-update-1)
 
 (defvar edie-wm--window-list nil)
@@ -392,11 +391,9 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-on-window-remove (wid)
   (let ((window (alist-get wid edie-wm--window-list)))
-    (funcall edie-wm-on-window-remove-function wid)))
+    (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
 
-(defun edie-wm--on-window-remove-1 (wid)
-  (setf (alist-get wid edie-wm--window-list nil 'remove) nil)
-  (run-hooks 'edie-wm-window-closed-hook))
+    (run-hooks 'edie-wm-window-closed-hook)))
 
 (defun edie-wm-on-window-update (wid changes)
   (funcall edie-wm-on-window-update-function wid changes))

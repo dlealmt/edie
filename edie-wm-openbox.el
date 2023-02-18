@@ -111,7 +111,6 @@
 
   (setq edie-wm-x11-on-desktop-focus-change-function #'edie-wm-on-desktop-focus-change)
   (setq edie-wm-x11-on-window-add-function #'edie-wm-on-window-add)
-  (setq edie-wm-x11-on-window-remove-function #'edie-wm-on-window-remove)
   (setq edie-wm-x11-on-window-update-function #'edie-wm-on-window-update)
 
   (edie-wm-x11-mode +1)
