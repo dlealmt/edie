@@ -171,13 +171,11 @@
   ""
   (let ((width (edie-widget-width node)))
     (edie-widget--make-svg-node
-     (map-merge
-      'alist
-      `((width . ,width)
-        (height . ,(edie-widget-height node))
-        (x . ,(edie-widget-x node))
-        (y . ,(edie-widget-y node))
-        (transform . ,(edie-widget-transform node))))
+     `((width . ,width)
+       (height . ,(edie-widget-height node))
+       (x . ,(edie-widget-x node))
+       (y . ,(edie-widget-y node))
+       (transform . ,(edie-widget-transform node)))
      (edie-widget--svg-list (edie-widget--children node)))))
 
 ;; icon
