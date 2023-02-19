@@ -1,4 +1,4 @@
-;;; edie-clock.el --- Clock widget for edie-bar -*- lexical-binding: t -*-
+;;; edie-bar-clock.el --- Clock widget for edie-bar -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022-2023 David Leal
 
@@ -38,20 +38,20 @@
   (pcase-let (((map format icon) attributes))
     `(box ,attributes
        ,(when icon
-          `(icon ((name . ,(edie-clock--icon icon)))))
+          `(icon ((name . ,(edie-bar-clock--icon icon)))))
        (text nil ,(format-time-string format)))))
 
-(defconst edie-clock--numbers
+(defconst edie-bar-clock--numbers
   ["twelve" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" "ten" "eleven"])
 
-(defun edie-clock--icon (icon)
+(defun edie-bar-clock--icon (icon)
   ""
   (cond
    ((eq icon 'moving-clock)
     (let ((pos (% (decoded-time-hour (decode-time)) 12)))
-      (format "clock-time-%s" (aref edie-clock--numbers pos))))
+      (format "clock-time-%s" (aref edie-bar-clock--numbers pos))))
    (t
     (symbol-name icon))))
 
-(provide 'edie-clock)
-;;; edie-clock.el ends here
+(provide 'edie-bar-clock)
+;;; edie-bar-clock.el ends here
