@@ -40,11 +40,20 @@
   (display-battery-mode +1)
   (add-hook 'battery-update-functions (lambda (_) update))
 
-  (pcase-let (((map format) attributes)
-              (battery (funcall battery-status-function)))
-    `(box ,@attributes
-       (icon ((name . battery-outline)))
-       (text nil ,(format-spec (or format edie-bar-battery-format) battery)))))
+  (pcase-let (((map format icon) attributes)
+              (batt (funcall battery-status-function)))
+    `(box ,attributes
+       (icon ((name . ,(edie-bar-battery--icon icon batt))))
+       (text nil ,(format-spec (or format edie-bar-battery-format) batt)))))
+
+(defun edie-bar-battery--icon (icon-name battery)
+  (cond
+   ((eq icon-name 'moving-battery)
+    (pcase battery
+      ((map (?p (and "100" (app string-to-number charge))))
+       "battery-charging")
+      ((map (?p (app string-to-number charge)))
+       (format "battery-%d" (- charge (% charge 10))))))))
 
 (provide 'edie-bar-battery)
 ;;; edie-bar-battery.el ends here
