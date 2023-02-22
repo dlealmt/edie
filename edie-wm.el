@@ -37,7 +37,6 @@
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
 
-(defvar edie-wm-workarea-function #'edie-wm-screenarea)
 (defvar edie-wm-window-close-functions nil)
 
 (defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
@@ -152,8 +151,6 @@ will be applied to windows matched by FILTERS."
     (let ((backend (intern (format "edie-wm-%s" edie-wm-backend)))
           (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
       (require backend)
-
-      (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
 
       (add-hook 'edie-wm-window-added-hook #'edie-wm--apply-rules -90)
       (add-hook 'edie-wm-window-added-hook #'edie-wm-tile-maybe-tile)
@@ -324,7 +321,16 @@ Return nil or the list of windows that match the filters."
                               `(:border ,(if undecorated 0 edie-wm-window-border-width)))))))
 
 (defun edie-wm-workarea ()
-  (funcall edie-wm-workarea-function))
+  (pcase-let* (((map (:left p-left)
+                     (:top p-top)
+                     (:right p-right)
+                     (:bottom p-bot))
+                edie-wm-desktop-padding)
+               ((map :left :top :width :height) (edie-wm-screenarea)))
+    `(:left ,(+ left p-left)
+      :top ,(+ top p-top)
+      :width ,(- width p-left p-right)
+      :height ,(- height p-top p-bot))))
 
 (defun edie-wm-screenarea ()
   (seq-let (left top width height) (map-elt (car (display-monitor-attributes-list)) 'geometry)
@@ -411,18 +417,6 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-desktop-focus-change ()
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
-(defun edie-wm--adjust-workarea (workarea)
-  (pcase-let* (((map (:left p-left)
-                     (:top p-top)
-                     (:right p-right)
-                     (:bottom p-bot))
-                edie-wm-desktop-padding)
-               ((map :left :top :width :height) workarea))
-    `(:left ,(+ left p-left)
-      :top ,(+ top p-top)
-      :width ,(- width p-left p-right)
-      :height ,(- height p-top p-bot))))
-
 (defun edie-wm--adjust-margins (plist)
   (if (eq (map-elt plist :workarea) 'screen)
       plist
