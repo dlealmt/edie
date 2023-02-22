@@ -105,9 +105,10 @@
   (setq edie-wm-focus-window-function #'edie-wm-x11-window-focus)
   (setq edie-wm-set-desktop-function #'edie-wm-x11-wm-set-desktop)
   (setq edie-wm-update-window-function #'edie-wm-x11-window-update)
-  (setq edie-wm-window-close-function #'edie-wm-x11-window-close)
   (setq edie-wm-window-list-function #'edie-wm-x11-window-list)
   (setq edie-wm-window-make-function #'edie-wm-x11-window-make)
+
+  (push #'edie-wm-x11-window-close edie-wm-window-close-functions)
 
   (setq edie-wm-x11-on-desktop-focus-change-function #'edie-wm-on-desktop-focus-change)
   (setq edie-wm-x11-on-window-add-function #'edie-wm-on-window-add)

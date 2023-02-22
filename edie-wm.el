@@ -35,11 +35,11 @@
 (defvar edie-wm-window-make-function nil)
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
-(defvar edie-wm-window-close-function nil)
 (defvar edie-wm-window-list-function nil)
 
 (defvar edie-wm-workarea-function #'edie-wm-screenarea)
 (defvar edie-wm-geometry-function #'edie-wm-geometry-1)
+(defvar edie-wm-window-close-functions nil)
 
 (defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
 (defvar edie-wm-on-window-update-function #'edie-wm--on-window-update-1)
@@ -238,8 +238,8 @@ switch to."
 (defun edie-wm-window-close (&optional window)
   "Close the active window or WINDOW."
   (interactive)
-  (when-let ((w (or window (edie-wm-current-window))))
-    (funcall edie-wm-window-close-function w)))
+  (when-let ((window (or window (edie-wm-current-window))))
+    (run-hook-with-args-until-success 'edie-wm-window-close-functions window)))
 
 (defun edie-wm-window-to-desktop (desktop &optional window)
   "Send WINDOW to DESKTOP."
