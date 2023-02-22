@@ -38,7 +38,6 @@
 (defvar edie-wm-window-list-function nil)
 
 (defvar edie-wm-workarea-function #'edie-wm-screenarea)
-(defvar edie-wm-geometry-function #'edie-wm-geometry-1)
 (defvar edie-wm-window-close-functions nil)
 
 (defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
@@ -154,7 +153,6 @@ will be applied to windows matched by FILTERS."
           (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
       (require backend)
 
-      (add-function :filter-return edie-wm-geometry-function #'edie-wm--adjust-margins)
       (add-function :filter-return edie-wm-workarea-function #'edie-wm--adjust-workarea)
 
       (add-hook 'edie-wm-window-added-hook #'edie-wm--apply-rules -90)
@@ -332,10 +330,7 @@ Return nil or the list of windows that match the filters."
   (seq-let (left top width height) (map-elt (car (display-monitor-attributes-list)) 'geometry)
     `(:left ,left :top ,top :width ,width :height ,height)))
 
-(defun edie-wm-geometry (spec)
-  (funcall edie-wm-geometry-function spec))
-
-(defun edie-wm-geometry-1 (plist)
+(defun edie-wm-geometry (plist)
   (pcase-let* (((map (:left wa-left) (:top wa-top) (:width wa-width) (:height wa-height))
                 (if (eq (map-elt plist :workarea) 'screen)
                     (edie-wm-screenarea)
@@ -347,7 +342,8 @@ Return nil or the list of windows that match the filters."
             :width (and width (edie-wm-unit-pixel width wa-width))
             :height (and height (edie-wm-unit-pixel height wa-height)))
       (map-filter (lambda (_ v) v))
-      (map-merge 'plist plist))))
+      (map-merge 'plist plist)
+      (edie-wm--adjust-margins))))
 
 (defun edie-wm-unit-pixel (fraction total)
   (cl-assert (and fraction total))
