@@ -193,7 +193,7 @@ switch to."
 
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
-  (pcase (edie-wm-x11-current-desktop)
+  (pcase (funcall edie-wm-current-desktop-function)
     ((seq desktop _ id) (seq-elt (edie-wm-desktop-list) id))))
 
 (defun edie-wm-desktop-index (desktop)
