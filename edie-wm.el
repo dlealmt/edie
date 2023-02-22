@@ -39,9 +39,6 @@
 
 (defvar edie-wm-window-close-functions nil)
 
-(defvar edie-wm-on-window-add-function #'edie-wm--on-window-add-1)
-(defvar edie-wm-on-window-update-function #'edie-wm--on-window-update-1)
-
 (defvar edie-wm--window-list nil)
 
 (defvar edie-wm--current-window-id nil)
@@ -380,10 +377,6 @@ Return nil or the list of windows that match the filters."
   (run-hooks 'edie-wm-window-focus-changed-hook))
 
 (defun edie-wm-on-window-add (window)
-  (pcase-let ((`(window ,wid) window))
-    (funcall edie-wm-on-window-add-function window)))
-
-(defun edie-wm--on-window-add-1 (window)
   ;; TODO ensure that window still exists
   (pcase-let (((seq 'window wid) window))
     (setf (map-elt edie-wm--window-list wid) window)
@@ -401,9 +394,6 @@ Return nil or the list of windows that match the filters."
     (setq edie-wm--window-list (delq (assq wid edie-wm--window-list) edie-wm--window-list))))
 
 (defun edie-wm-on-window-update (wid changes)
-  (funcall edie-wm-on-window-update-function wid changes))
-
-(defun edie-wm--on-window-update-1 (wid changes)
   ;; TODO: check if window exists
   (let* ((window (alist-get wid edie-wm--window-list))
          (props (edie-wm-window-properties window))

@@ -292,8 +292,9 @@
     (with-slots (atom window) event
       (cond
        ((= atom xcb:Atom:_NET_WM_NAME)
-        (funcall edie-wm-x11-on-window-update-function window
-                 (list :title (edie-wm-x11<->property '_NET_WM_NAME window))))
+        (edie-wm-on-window-update
+         window
+         (list :title (edie-wm-x11<->property '_NET_WM_NAME window))))
        ((= atom xcb:Atom:_NET_CLIENT_LIST)
         (let* ((old-list edie-wm-x11--window-id-list)
                (new-list (edie-wm-x11<->property '_NET_CLIENT_LIST))
@@ -304,13 +305,13 @@
               (dolist (wid added)
                 (when-let ((wnd (edie-wm-x11-window-make wid)))
                   (edie-wm-x11--event-listen wid)
-                  (funcall edie-wm-x11-on-window-add-function wnd)))
+                  (edie-wm-on-window-add wnd)))
             (dolist (wid removed)
               (edie-wm-on-window-remove wid)))))
        ((= atom xcb:Atom:_NET_ACTIVE_WINDOW)
         (edie-wm-on-window-focus (edie-wm-x11-current-window-id)))
        ((= atom xcb:Atom:_NET_CURRENT_DESKTOP)
-        (funcall edie-wm-x11-on-desktop-focus-change-function))))))
+        (edie-wm-on-desktop-focus-change))))))
 
 (defun edie-wm-x11->property (sym &optional window-id)
   (let* ((str (symbol-name sym))
