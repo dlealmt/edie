@@ -27,6 +27,7 @@
 
 ;;; Code:
 
+(require 'edie-wm)
 (require 'map)
 (require 'pcase)
 (require 'xcb)
@@ -50,8 +51,17 @@
   :global t
   (if edie-wm-x11-mode
       (progn
-        (edie-wm-x11-connect)
+        (setq edie-wm-current-desktop-function #'edie-wm-x11-current-desktop)
+        (setq edie-wm-current-window-id-function #'edie-wm-x11-current-window-id)
+        (setq edie-wm-focus-window-function #'edie-wm-x11-window-focus)
+        (setq edie-wm-set-desktop-function #'edie-wm-x11-wm-set-desktop)
+        (setq edie-wm-update-window-function #'edie-wm-x11-window-update)
+        (setq edie-wm-window-list-function #'edie-wm-x11-window-list)
+        (setq edie-wm-window-make-function #'edie-wm-x11-window-make)
 
+        (add-hook 'edie-wm-window-close-functions #'edie-wm-x11-window-close)
+
+        (edie-wm-x11-connect)
         (edie-wm-x11--event-listen edie-wm-x11--root-window)
 
         (xcb:+event edie-wm-x11--connection
@@ -59,6 +69,16 @@
                     #'edie-wm-x11--event-on-property-change)
 
         (xcb:flush edie-wm-x11--connection))
+
+    (setq edie-wm-current-desktop-function nil)
+    (setq edie-wm-current-window-id-function nil)
+    (setq edie-wm-focus-window-function nil)
+    (setq edie-wm-set-desktop-function nil)
+    (setq edie-wm-update-window-function nil)
+    (setq edie-wm-window-list-function nil)
+    (setq edie-wm-window-make-function nil)
+
+    (remove-hook 'edie-wm-window-close-functions #'edie-wm-x11-window-close)
 
     (edie-wm-x11-disconnect)))
 
