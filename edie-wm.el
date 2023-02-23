@@ -428,9 +428,13 @@ Return nil or the list of windows that match the filters."
         plist))))
 
 (defun edie-wm--apply-rules ()
-  (when-let ((window (edie-wm-current-window))
-             (rules (edie-wm--find-rule window)))
-    (edie-wm-update-window window rules)))
+  (let* ((window (edie-wm-current-window))
+         (rules (and window (edie-wm--find-rule window)))
+         (props (and window (edie-wm-window-properties window))))
+    (when (and rules (not (map-every-p (lambda (k v)
+                                         (equal (plist-get props k) v))
+                                       rules)))
+      (edie-wm-update-window window rules))))
 
 (defun edie-wm--find-rule (window)
   (cdr (seq-find (pcase-lambda (`(,filter . ,_))
