@@ -39,9 +39,6 @@
 
 (defconst edie-wm-x11-sticky #xffffffff)
 
-(defvar edie-wm-x11-on-desktop-focus-change-function nil)
-(defvar edie-wm-x11-on-window-add-function nil)
-(defvar edie-wm-x11-on-window-update-function nil)
 (defvar edie-wm-x11--window-id-list nil)
 
 (define-error 'edie-wm-x11-no-reply "Expected a reply for this request.")
