@@ -44,6 +44,11 @@
   "Path to Openbox's rc file."
   :type 'file)
 
+(defcustom edie-wm-openbox-autostart-filename
+  (file-name-concat (xdg-config-home) "openbox" "autostart")
+  "Path to Openbox's autostart file."
+  :type 'file)
+
 (defcustom edie-wm-openbox-theme-alist
   '(("window.handle.width" . 0)
     ("border.width" . edie-wm-window-border-width)
@@ -92,14 +97,8 @@
   "Base Openbox config."
   :type 'sexp)
 
-(defvar edie-wm-openbox--process nil)
-
 (defun edie-wm-openbox-start ()
   ""
-  (edie-wm-openbox--write-configuration)
-
-  (setq edie-wm-openbox--process (start-process "edie-wm-wm" "*edie-wm-wm*" "openbox"))
-
   (edie-wm-x11-mode +1)
 
   (when edie-wm-default-desktop-list
@@ -226,8 +225,17 @@
     (set-buffer-modified-p t)
     (save-buffer)))
 
+(defun edie-wm-openbox--write-autostart ()
+  ""
+  (with-temp-buffer
+    (insert "emacs &") (newline)
+    (set-visited-file-name edie-wm-openbox-autostart-filename)
+    (set-buffer-modified-p t)
+    (save-buffer)))
+
 (defun edie-wm-openbox--write-configuration ()
   ""
+  (edie-wm-openbox--write-autostart)
   (edie-wm-openbox--write-rcxml)
   (edie-wm-openbox--write-theme))
 
