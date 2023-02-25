@@ -211,13 +211,13 @@
 
     (map-let (:type) plist
       (when type
-        (edie-wm-x11-window-update-type wid type))))
+        (edie-wm-x11-window-update-type wid type)))
 
-  (pcase plist
-    ((map (:desktop (and (pred integerp) desktop-id)))
-     (edie-wm-x11-window-update-desktop window desktop-id))
-    ((map (:desktop (pred (eq t))))
-     (edie-wm-x11-window-update-desktop window edie-wm-x11-sticky)))
+    (pcase plist
+      ((map (:desktop (and (pred integerp) desktop-id)))
+       (edie-wm-x11-window-update-desktop wid desktop-id))
+      ((map (:desktop (pred (eq t))))
+       (edie-wm-x11-window-update-desktop wid edie-wm-x11-sticky))))
 
   (pcase plist
     ((map (:stacking (and stacking (pred identity))))
@@ -277,16 +277,15 @@
                           :x left :y top
                           :width (- width (* 2 border)) :height (- height (* 2 border)))))
 
-(defun edie-wm-x11-window-update-desktop (window desktop-id)
-  (pcase-let* (((seq 'window wid) window))
-    (cl-assert wid t)
-    (cl-assert desktop-id t)
+(defun edie-wm-x11-window-update-desktop (wid desktop-id)
+  (cl-assert wid t)
+  (cl-assert desktop-id t)
 
-    (edie-wm-x11-dispatch (make-instance 'xcb:MapWindow :window wid)
-                          (edie-wm-x11-make-ewmh-event 'xcb:ewmh:_NET_WM_DESKTOP
-                                                       :window wid
-                                                       :new-desktop desktop-id
-                                                       :source-indication 2))))
+  (edie-wm-x11-dispatch (make-instance 'xcb:MapWindow :window wid)
+                        (edie-wm-x11-make-ewmh-event 'xcb:ewmh:_NET_WM_DESKTOP
+                                                     :window wid
+                                                     :new-desktop desktop-id
+                                                     :source-indication 2)))
 
 (defun edie-wm-x11--event-listen (wid)
   (xcb:+request-checked+request-check edie-wm-x11--connection
