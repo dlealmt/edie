@@ -217,11 +217,11 @@
       ((map (:desktop (and (pred integerp) desktop-id)))
        (edie-wm-x11-window-update-desktop wid desktop-id))
       ((map (:desktop (pred (eq t))))
-       (edie-wm-x11-window-update-desktop wid edie-wm-x11-sticky))))
+       (edie-wm-x11-window-update-desktop wid edie-wm-x11-sticky)))
 
-  (pcase plist
-    ((map (:stacking (and stacking (pred identity))))
-     (edie-wm-x11-window-update-stacking window stacking)))
+    (pcase plist
+      ((map (:stacking (and stacking (pred identity))))
+       (edie-wm-x11-window-update-stacking wid stacking))))
 
   (pcase-let (((seq 'window wid wprops) window))
     (list 'window wid (map-merge 'plist wprops plist))))
@@ -248,21 +248,19 @@
                                                      :window wid
                                                      :source-indication 2)))
 
-(defun edie-wm-x11-window-update-stacking (window stacking)
-  (pcase-let (((seq 'window wid) window)
-              (prop (cond
-                     ((eq stacking 'above)
-                      xcb:Atom:_NET_WM_STATE_ABOVE)
-                     ((eq stacking 'below)
-                      xcb:Atom:_NET_WM_STATE_BELOW))))
+(defun edie-wm-x11-window-update-stacking (wid stacking)
+  (let ((prop (cond
+               ((eq stacking 'above)
+                xcb:Atom:_NET_WM_STATE_ABOVE)
+               ((eq stacking 'below)
+                xcb:Atom:_NET_WM_STATE_BELOW))))
     (cl-assert wid)
-    (cl-assert (memq prop (list xcb:Atom:_NET_WM_STATE_ABOVE xcb:Atom:_NET_WM_STATE_BELOW)))
     (edie-wm-x11-dispatch (edie-wm-x11-make-ewmh-event 'xcb:ewmh:_NET_WM_STATE
-                                               :action xcb:ewmh:_NET_WM_STATE_ADD
-                                               :first-property prop
-                                               :second-property 0
-                                               :window wid
-                                               :source-indication 2))))
+                                                       :action xcb:ewmh:_NET_WM_STATE_ADD
+                                                       :first-property prop
+                                                       :second-property 0
+                                                       :window wid
+                                                       :source-indication 2))))
 
 (defun edie-wm-x11-window-update-geometry (wid plist)
   (pcase-let* (((map :left :top :width :height :border) plist))
