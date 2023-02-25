@@ -44,7 +44,7 @@
   :group 'edie
   :prefix "edie-wallpaper-")
 
-(defcustom edie-wallpaper-wallpaper-change-interval 300
+(defcustom edie-wallpaper-change-interval 300
   "The time between wallpaper changes, in seconds."
   :type 'natnum)
 
@@ -76,12 +76,12 @@
   "Show a different wallpaper, picked at random.
 
 Reset the wallpaper change timer, so that the wallpaper will be
-displayed for the time set in `edie-wallpaper-wallpaper-change-interval'."
+displayed for the time set in `edie-wallpaper-change-interval'."
   (interactive)
   (when edie-wallpaper--timer
     (cancel-timer edie-wallpaper--timer))
 
-  (setq edie-wallpaper--timer (run-at-time edie-wallpaper-wallpaper-change-interval nil #'edie-wallpaper-next-image))
+  (setq edie-wallpaper--timer (run-at-time edie-wallpaper-change-interval nil #'edie-wallpaper-next-image))
   (setq edie-wallpaper--current-image-path (seq-random-elt (edie-wallpaper--image-list)))
 
   (apply #'start-process
