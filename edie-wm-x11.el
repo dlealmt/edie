@@ -207,11 +207,11 @@
       (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden))))
 
     (when (map-elt plist :focus)
-      (edie-wm-x11-window-focus wid)))
+      (edie-wm-x11-window-focus wid))
 
-  (map-let (:type) plist
-    (when type
-      (edie-wm-x11-window-update-type window type)))
+    (map-let (:type) plist
+      (when type
+        (edie-wm-x11-window-update-type wid type))))
 
   (pcase plist
     ((map (:desktop (and (pred integerp) desktop-id)))
@@ -226,15 +226,14 @@
   (pcase-let (((seq 'window wid wprops) window))
     (list 'window wid (map-merge 'plist wprops plist))))
 
-(defun edie-wm-x11-window-update-type (window type)
-  (pcase-let (((seq 'window wid) window)
-              (type-atom (cond
-                          ((eq type 'dock) xcb:Atom:_NET_WM_WINDOW_TYPE_DOCK))))
+(defun edie-wm-x11-window-update-type (wid type)
+  (let ((type-atom (cond
+                    ((eq type 'dock) xcb:Atom:_NET_WM_WINDOW_TYPE_DOCK))))
     (cl-assert wid type)
     (edie-wm-x11-dispatch 'xcb:UnmapWindow :window wid)
     (edie-wm-x11-dispatch 'xcb:ewmh:set-_NET_WM_WINDOW_TYPE
-                      :window wid
-                      :data (list type-atom))
+                          :window wid
+                          :data (list type-atom))
     (edie-wm-x11-dispatch 'xcb:MapWindow :window wid)))
 
 (defun edie-wm-x11-window-update-visibility (wid visible)
