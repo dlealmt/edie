@@ -64,6 +64,10 @@
   "Path to the directory where the images are stored."
   :type 'directory)
 
+(defcustom edie-wallpaper-process-buffer-name "*edie-wallpaper*"
+  "Name of the buffer to which the wallpaper process sends its output."
+  :type 'string)
+
 (defvar edie-wallpaper--current-image-path nil)
 (defvar edie-wallpaper--timer nil)
 
@@ -109,7 +113,7 @@ Show a new image afterwards."
 (defun edie-wallpaper-next-image-generic ()
   (apply #'start-process
          edie-wallpaper-program
-         "*edie-wallpaper*"
+         edie-wallpaper-process-buffer-name
          edie-wallpaper-program
          (append edie-wallpaper-program-args (list edie-wallpaper--current-image-path))))
 
