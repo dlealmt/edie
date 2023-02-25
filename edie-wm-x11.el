@@ -201,10 +201,10 @@
   (pcase-let (((seq 'window wid) window))
     (map-let (:left :top :width :height) plist
       (when (and left top width height)
-        (edie-wm-x11-window-update-geometry wid plist))))
+        (edie-wm-x11-window-update-geometry wid plist)))
 
-  (when (map-contains-key plist :hidden)
-    (edie-wm-x11-window-update-visibility window (not (map-elt plist :hidden))))
+    (when (map-contains-key plist :hidden)
+      (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden)))))
 
   (when (map-elt plist :focus)
     (edie-wm-x11-window-focus window))
@@ -237,18 +237,17 @@
                       :data (list type-atom))
     (edie-wm-x11-dispatch 'xcb:MapWindow :window wid)))
 
-(defun edie-wm-x11-window-update-visibility (window visible)
-  (pcase-let (((seq 'window wid) window)
-              (action (if visible
-                          xcb:ewmh:_NET_WM_STATE_REMOVE
-                        xcb:ewmh:_NET_WM_STATE_ADD)))
-    (cl-assert wid)
-    (edie-wm-x11-dispatch (edie-wm-x11-make-ewmh-event 'xcb:ewmh:_NET_WM_STATE
-                                               :action action
-                                               :first-property xcb:Atom:_NET_WM_STATE_HIDDEN
-                                               :second-property 0
-                                               :window wid
-                                               :source-indication 2))))
+(defun edie-wm-x11-window-update-visibility (wid visible)
+  (let ((action (if visible
+                    xcb:ewmh:_NET_WM_STATE_REMOVE
+                  xcb:ewmh:_NET_WM_STATE_ADD))))
+  (cl-assert wid)
+  (edie-wm-x11-dispatch (edie-wm-x11-make-ewmh-event 'xcb:ewmh:_NET_WM_STATE
+                                                     :action action
+                                                     :first-property xcb:Atom:_NET_WM_STATE_HIDDEN
+                                                     :second-property 0
+                                                     :window wid
+                                                     :source-indication 2)))
 
 (defun edie-wm-x11-window-update-stacking (window stacking)
   (pcase-let (((seq 'window wid) window)
