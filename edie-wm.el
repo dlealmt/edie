@@ -203,7 +203,7 @@ switch to."
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
-  (funcall edie-wm-focus-window-function window))
+  (funcall edie-wm-focus-window-function (edie-wm-window-id window)))
 
 (defun edie-wm-window-id (window)
   "Return the ID of WINDOW."

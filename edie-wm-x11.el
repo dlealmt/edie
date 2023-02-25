@@ -177,14 +177,14 @@
 (defun edie-wm-x11-root-client-list-stacking ()
   (nreverse (seq-map #'edie-wm-x11-window-make (edie-wm-x11<->property '_NET_CLIENT_LIST_STACKING))))
 
-(defun edie-wm-x11-window-focus (window)
-  (pcase-let (((seq 'window wid) window))
-    (edie-wm-x11-dispatch (edie-wm-x11-make-ewmh-event
-                       'xcb:ewmh:_NET_ACTIVE_WINDOW
-                       :source-indication 2
-                       :timestamp xcb:Time:CurrentTime
-                       :window wid
-                       :current-active-window 0))))
+(defun edie-wm-x11-window-focus (wid)
+  ""
+  (edie-wm-x11-dispatch (edie-wm-x11-make-ewmh-event
+                         'xcb:ewmh:_NET_ACTIVE_WINDOW
+                         :source-indication 2
+                         :timestamp xcb:Time:CurrentTime
+                         :window wid
+                         :current-active-window 0)))
 
 (defun edie-wm-x11-window-close (window)
   (pcase-let (((seq 'window wid) window))
@@ -204,10 +204,10 @@
         (edie-wm-x11-window-update-geometry wid plist)))
 
     (when (map-contains-key plist :hidden)
-      (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden)))))
+      (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden))))
 
-  (when (map-elt plist :focus)
-    (edie-wm-x11-window-focus window))
+    (when (map-elt plist :focus)
+      (edie-wm-x11-window-focus wid)))
 
   (map-let (:type) plist
     (when type
