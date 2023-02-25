@@ -48,6 +48,10 @@
   "The time between wallpaper changes, in seconds."
   :type 'natnum)
 
+(defcustom edie-wallpaper-next-image-function #'edie-wallpaper-next-image-generic
+  "Function to use to show the next wallpaper image."
+  :type 'function)
+
 (defcustom edie-wallpaper-program "nitrogen"
   "The name by which to invoke the background setter program."
   :type 'string)
@@ -84,11 +88,7 @@ displayed for the time set in `edie-wallpaper-change-interval'."
   (setq edie-wallpaper--timer (run-at-time edie-wallpaper-change-interval nil #'edie-wallpaper-next-image))
   (setq edie-wallpaper--current-image-path (seq-random-elt (edie-wallpaper--image-list)))
 
-  (apply #'start-process
-         edie-wallpaper-program
-         "*edie-wallpaper*"
-         edie-wallpaper-program
-         (append edie-wallpaper-program-args (list edie-wallpaper--current-image-path))))
+  (funcall edie-wallpaper-next-image-function))
 
 (defun edie-wallpaper-delete-current-image ()
   "Delete the current wallpaper image.
@@ -105,6 +105,13 @@ Show a new image afterwards."
               (yes-or-no-p "Are you sure you want to delete this wallpaper image?"))
       (delete-file victim)
       (edie-wallpaper-next-image))))
+
+(defun edie-wallpaper-next-image-generic ()
+  (apply #'start-process
+         edie-wallpaper-program
+         "*edie-wallpaper*"
+         edie-wallpaper-program
+         (append edie-wallpaper-program-args (list edie-wallpaper--current-image-path))))
 
 (defun edie-wallpaper--image-list ()
   "Build the the list of images in `edie-wallpaper-image-path'."
