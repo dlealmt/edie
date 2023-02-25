@@ -196,35 +196,31 @@
                               :timestamp xcb:Time:CurrentTime
                               :window wid))))
 
-(defun edie-wm-x11-window-update (window plist)
+(defun edie-wm-x11-window-update (wid plist)
   ""
-  (pcase-let (((seq 'window wid) window))
-    (map-let (:left :top :width :height) plist
-      (when (and left top width height)
-        (edie-wm-x11-window-update-geometry wid plist)))
+  (map-let (:left :top :width :height) plist
+    (when (and left top width height)
+      (edie-wm-x11-window-update-geometry wid plist)))
 
-    (when (map-contains-key plist :hidden)
-      (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden))))
+  (when (map-contains-key plist :hidden)
+    (edie-wm-x11-window-update-visibility wid (not (map-elt plist :hidden))))
 
-    (when (map-elt plist :focus)
-      (edie-wm-x11-window-focus wid))
+  (when (map-elt plist :focus)
+    (edie-wm-x11-window-focus wid))
 
-    (map-let (:type) plist
-      (when type
-        (edie-wm-x11-window-update-type wid type)))
+  (map-let (:type) plist
+    (when type
+      (edie-wm-x11-window-update-type wid type)))
 
-    (pcase plist
-      ((map (:desktop (and (pred integerp) desktop-id)))
-       (edie-wm-x11-window-update-desktop wid desktop-id))
-      ((map (:desktop (pred (eq t))))
-       (edie-wm-x11-window-update-desktop wid edie-wm-x11-sticky)))
+  (pcase plist
+    ((map (:desktop (and (pred integerp) desktop-id)))
+     (edie-wm-x11-window-update-desktop wid desktop-id))
+    ((map (:desktop (pred (eq t))))
+     (edie-wm-x11-window-update-desktop wid edie-wm-x11-sticky)))
 
-    (pcase plist
-      ((map (:stacking (and stacking (pred identity))))
-       (edie-wm-x11-window-update-stacking wid stacking))))
-
-  (pcase-let (((seq 'window wid wprops) window))
-    (list 'window wid (map-merge 'plist wprops plist))))
+  (pcase plist
+    ((map (:stacking (and stacking (pred identity))))
+     (edie-wm-x11-window-update-stacking wid stacking))))
 
 (defun edie-wm-x11-window-update-type (wid type)
   (let ((type-atom (cond

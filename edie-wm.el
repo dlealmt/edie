@@ -310,12 +310,11 @@ Return nil or the list of windows that match the filters."
          (or (not fwidth) (equal fwidth wwidth)))))
 
 (defun edie-wm-update-window (window plist)
-  (pcase-let (((seq 'window wid (map :undecorated)) window))
-    (setf (map-elt edie-wm--window-list wid)
-          (funcall edie-wm-update-window-function
-                   window
-                   (map-merge 'plist plist (edie-wm-geometry plist)
-                              `(:border ,(if undecorated 0 edie-wm-window-border-width)))))))
+  (pcase-let (((seq 'window wid props) window)
+              (plist (map-merge 'plist plist (edie-wm-geometry plist)
+                                `(:border ,edie-wm-window-border-width))))
+    (setf (map-elt edie-wm--window-list wid) (list 'window wid (map-merge 'plist props plist)))
+    (funcall edie-wm-update-window-function wid plist)))
 
 (defun edie-wm-workarea ()
   (pcase-let* (((map (:left p-left)
