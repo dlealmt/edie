@@ -149,15 +149,17 @@ will be applied to windows matched by FILTERS."
           (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
       (require backend)
 
+      (funcall start-fn)
+
+      (edie-wm-reset-window-list)
+
+      (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function))
+
       (add-hook 'edie-wm-window-added-hook #'edie-wm--apply-rules -90)
       (add-hook 'edie-wm-window-added-hook #'edie-wm-tile-maybe-tile)
 
       (add-hook 'edie-wm-window-updated-hook #'edie-wm--apply-rules -90)
-      (add-hook 'edie-wm-window-updated-hook #'edie-wm-tile-maybe-tile)
-
-      (funcall start-fn)
-
-      (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function)))))
+      (add-hook 'edie-wm-window-updated-hook #'edie-wm-tile-maybe-tile))))
 
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
