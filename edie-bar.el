@@ -96,9 +96,9 @@
   "Run the tick hook."
   (run-hooks 'edie-bar-tick-hook))
 
-(defun edie-bar-setup-frame (display &optional parameters)
+(defun edie-bar-setup-frame (&optional parameters)
   ""
-  (make-frame-on-display display (map-merge 'alist parameters edie-bar-default-frame-alist)))
+  (make-frame (map-merge 'alist parameters edie-bar-default-frame-alist)))
 
 (defsubst edie-bar-frame ()
   default-minibuffer-frame)
