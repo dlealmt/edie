@@ -401,9 +401,7 @@ Return nil or the list of windows that match the filters."
          (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
 
-    (run-hooks 'edie-wm-window-updated-hook)
-
-    window))
+    (run-hooks 'edie-wm-window-updated-hook)))
 
 (defun edie-wm-on-desktop-focus-change ()
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
