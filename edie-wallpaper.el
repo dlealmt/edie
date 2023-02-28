@@ -52,6 +52,10 @@
   "Function to use to show the next wallpaper image."
   :type 'function)
 
+(defcustom edie-wallpaper-backend 'generic
+  "The backend to use to change the wallpaper."
+  :type 'symbol)
+
 (defcustom edie-wallpaper-program "nitrogen"
   "The name by which to invoke the background setter program."
   :type 'string)
@@ -68,7 +72,9 @@
   "Name of the buffer to which the wallpaper process sends its output."
   :type 'string)
 
-(defvar edie-wallpaper--current-image-path nil)
+(defvar edie-wallpaper-current-image-path nil
+  "Path to the image that is currently being used as wallpaper.")
+
 (defvar edie-wallpaper--timer nil)
 
 ;;;###autoload
@@ -77,7 +83,10 @@
   :global t
   (when edie-wallpaper--timer
     (cancel-timer edie-wallpaper--timer))
+
   (when edie-wallpaper-mode
+    (setq edie-wallpaper-next-image-function (edie-wallpaper--get-next-image-function))
+
     (edie-wallpaper-next-image)))
 
 (defun edie-wallpaper-next-image ()
@@ -90,7 +99,7 @@ displayed for the time set in `edie-wallpaper-change-interval'."
     (cancel-timer edie-wallpaper--timer))
 
   (setq edie-wallpaper--timer (run-at-time edie-wallpaper-change-interval nil #'edie-wallpaper-next-image))
-  (setq edie-wallpaper--current-image-path (seq-random-elt (edie-wallpaper--image-list)))
+  (setq edie-wallpaper-current-image-path (seq-random-elt (edie-wallpaper--image-list)))
 
   (funcall edie-wallpaper-next-image-function))
 
@@ -104,7 +113,7 @@ If the image is to be deleted, ask for confirmation first.
 
 Show a new image afterwards."
   (interactive)
-  (let ((victim edie-wallpaper--current-image-path))
+  (let ((victim edie-wallpaper-current-image-path))
     (when (or delete-by-moving-to-trash
               (yes-or-no-p "Are you sure you want to delete this wallpaper image?"))
       (delete-file victim)
@@ -115,11 +124,21 @@ Show a new image afterwards."
          edie-wallpaper-program
          edie-wallpaper-process-buffer-name
          edie-wallpaper-program
-         (append edie-wallpaper-program-args (list edie-wallpaper--current-image-path))))
+         (append edie-wallpaper-program-args (list edie-wallpaper-current-image-path))))
 
 (defun edie-wallpaper--image-list ()
   "Build the the list of images in `edie-wallpaper-image-path'."
   (directory-files edie-wallpaper-image-path t "[[:alnum:]]$"))
+
+(defun edie-wallpaper--get-next-image-function ()
+  ""
+  (let ((feature (intern (format "edie-wp-%s" edie-wallpaper-backend)))
+        (fn (intern (format "edie-wallpaper-next-image-%s" edie-wallpaper-backend))))
+    (ignore-errors (require feature))
+
+    (if (fboundp fn)
+        fn
+      (user-error "Unable to set next image function: %s" fn))))
 
 (provide 'edie-wallpaper)
 ;;; edie-wallpaper.el ends here
