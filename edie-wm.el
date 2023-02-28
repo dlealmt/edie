@@ -365,7 +365,7 @@ Return nil or the list of windows that match the filters."
     (truncate size)))
 
 (defun edie-wm-on-window-focus (wid)
-  (if-let ((elt (assq wid edie-wm--window-list)))
+  (if-let ((elt (assoc wid edie-wm--window-list)))
       ;; move window to the top of the stack
       (progn
         (setq edie-wm--window-list (delq elt edie-wm--window-list))
@@ -387,14 +387,14 @@ Return nil or the list of windows that match the filters."
       window)))
 
 (defun edie-wm-on-window-remove (wid)
-  (when-let ((window (alist-get wid edie-wm--window-list)))
+  (when-let ((window (cdr (assoc wid edie-wm--window-list))))
     (run-hooks 'edie-wm-window-closed-hook)
 
-    (setq edie-wm--window-list (delq (assq wid edie-wm--window-list) edie-wm--window-list))))
+    (setq edie-wm--window-list (delete (assoc wid edie-wm--window-list) edie-wm--window-list))))
 
 (defun edie-wm-on-window-update (wid changes)
   ;; TODO: check if window exists
-  (let* ((window (alist-get wid edie-wm--window-list))
+  (let* ((window (cdr (assoc wid edie-wm--window-list)))
          (props (edie-wm-window-properties window))
          (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
