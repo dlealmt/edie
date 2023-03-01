@@ -44,9 +44,9 @@
 
 (defvar edie-bar-desktop-list--svg nil)
 
-(cl-defmethod edie-widget-render ((widget (head desktop-list)) update)
+(cl-defmethod edie-widget-render ((widget (head desktop-list)))
   ""
-  (add-hook 'edie-wm-desktop-focus-changed-hook update)
+  (edie-widget-add-update-hook 'edie-wm-desktop-focus-changed-hook)
 
   (let ((desktop-index (edie-wm-desktop-index (edie-wm-current-desktop)))
         used-desktops)

@@ -31,9 +31,9 @@
 (require 'dom)
 (require 'edie-widget)
 
-(cl-defmethod edie-widget-render (((&whole clock _ attributes &rest) (head clock)) update)
+(cl-defmethod edie-widget-render (((&whole clock _ attributes &rest) (head clock)))
   ""
-  (add-hook 'edie-bar-tick-hook update)
+  (edie-widget-add-update-hook 'edie-bar-tick-hook)
 
   (pcase-let (((map format icon) attributes))
     `(box ,attributes

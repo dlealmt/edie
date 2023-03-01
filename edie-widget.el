@@ -56,37 +56,69 @@
 
 (defvar edie-widget-icon-directory "~/.cache/material-design/svg")
 
-(defun edie-widget-render-to (frame &optional spec)
+(defvar edie-widget--setup-hooks nil)
+(defvar edie-widget--install nil)
+
+(defun edie-widget-render-to (frame spec)
   ""
   (let ((spec (or spec (frame-parameter frame 'edie-bar:spec))))
-    (with-selected-frame frame
-      (with-current-buffer (window-buffer (frame-root-window))
-        (when (not (minibuffer-prompt))
-          (let* ((update (lambda () (edie-widget-render-to frame)))
-                 (state (edie-widget--render-tree spec update)))
-            (unless (equal state (frame-parameter frame 'edie-bar:state))
-              (delete-region (point-min) (point-max))
-              (let ((svg (edie-widget--render-svg state)))
-                (modify-frame-parameters frame `((edie-bar:state . ,state)
-                                                 (edie-bar:svg . ,svg)
-                                                 (edie-bar:spec . ,spec)))
-                (edie-widget--insert-image svg)
-                svg))))))))
+    (let* ((update-function (lambda (&rest _) (edie-widget--refresh frame)))
+           (edie-widget--install t))
+      (set-frame-parameter frame 'edie-bar:spec spec)
+      (edie-widget--refresh frame)
+      (edie-widget--setup edie-widget--setup-hooks update-function))))
+
+(defun edie-widget--refresh (frame)
+  ""
+  (with-selected-frame frame
+    (with-current-buffer (window-buffer (frame-root-window))
+      (when (not (minibuffer-prompt)) ;; TODO We're assuming frame is a minibuffer frame
+        (let* ((state (edie-widget--render-tree (frame-parameter frame 'edie-bar:spec))))
+          (unless (equal state (frame-parameter frame 'edie-bar:state))
+            (delete-region (point-min) (point-max))
+            (let ((svg (edie-widget--render-svg state)))
+              (modify-frame-parameters frame `((edie-bar:state . ,state) (edie-bar:svg . ,svg)))
+              (edie-widget--insert-image svg)
+              svg)))))))
 
 (defun edie-widget-propertize (string spec)
   (edie-widget-put-image spec 0 (length string) string))
 
 (defun edie-widget-put-image (spec from to &optional where)
-  (let* ((s (edie-widget--render-tree spec nil))
+  (let* ((s (edie-widget--render-tree spec))
          (svg (edie-widget--render-svg s)))
     (put-text-property from to 'display (edie-widget--create-image svg) where)
     (put-text-property from to 'edie:svg svg where)
     where))
 
-(cl-defgeneric edie-widget-render (widget _)
+(cl-defgeneric edie-widget-render (widget)
   ""
   widget)
 
+;;; Hooks(ish)
+(defun edie-widget-add-install-hook (&rest hooks)
+  ""
+  (when edie-widget--install
+    (dolist (hook hooks)
+      (push (cons 'install hook) edie-widget--setup-hooks))))
+
+(defun edie-widget-add-update-hook (&rest hooks)
+  ""
+  (when edie-widget--install
+    (dolist (hook hooks)
+      (push (cons 'update hook) edie-widget--setup-hooks))))
+
+(defun edie-widget--setup (hooks update-function)
+  ""
+  (pcase-dolist (hook hooks)
+    (pcase hook
+      (`(install . ,hook)
+       (funcall hook))
+       (`(update . ,hook)
+        (add-hook hook update-function)))))
+
+
+;;; Widgets
 (cl-defgeneric edie-widget-svg (node))
 
 (cl-defgeneric edie-widget-width (node))
@@ -322,17 +354,17 @@
 (defun edie-widget--make-node (tag attributes children)
   (apply #'dom-node tag attributes children))
 
-(defun edie-widget--render-tree (spec update)
+(defun edie-widget--render-tree (spec)
   ""
   (pcase spec
     ((pred stringp) spec)
     (_
-     (pcase-let (((and next (seq tag attributes &rest children)) (edie-widget-render spec update))
+     (pcase-let (((seq tag attributes &rest children) (edie-widget-render spec))
                  (nchildren))
        `(,tag
          ,attributes
          ,@(dolist (c children (nreverse nchildren))
-             (push (edie-widget--render-tree c update) nchildren)))))))
+             (push (edie-widget--render-tree c) nchildren)))))))
 
 (defun edie-widget--svg-list (nodes)
   (let (lst)

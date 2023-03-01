@@ -29,16 +29,17 @@
 ;;; Code:
 
 (require 'edie-widget)
+(require 'battery)
 
 (defcustom edie-bar-battery-format "%t"
   "Format for the battery widget."
   :group 'edie-bar
   :type 'string)
 
-(cl-defmethod edie-widget-render (((&whole battery _ attributes &rest) (head battery)) update)
+(cl-defmethod edie-widget-render (((&whole battery _ attributes &rest) (head battery)))
   ""
-  (display-battery-mode +1)
-  (add-hook 'battery-update-functions (lambda (_) update))
+  (edie-widget-add-install-hook #'display-battery-mode)
+  (edie-widget-add-update-hook 'battery-update-functions)
 
   (pcase-let (((map format icon) attributes)
               (batt (funcall battery-status-function)))

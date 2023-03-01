@@ -115,7 +115,7 @@
     (when (/= cur-height next-height)
       (set-frame-height frame next-height nil t))))
 
-(cl-defmethod edie-widget-render (((_ attributes &rest children) (head bar)) _)
+(cl-defmethod edie-widget-render (((_ attributes &rest children) (head bar)))
   ""
   `(box ,attributes ,@children))
 
