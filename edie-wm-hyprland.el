@@ -102,17 +102,22 @@
   (edie-wm-hypr--write 'bringactivetotop))
 
 (defun edie-wm-hypr--window-focus (wid)
-  (edie-wm-hypr--write 'focuswindow (format "address:0x%s" wid)))
+  (edie-wm-hypr--window-update wid '(:focus t)))
 
 (defun edie-wm-hypr--window-update (wid props)
-  (pcase-let (((map :left :top :width :height) props))
+  (cl-assert (and wid props) t)
+
+  (pcase-let (((map :left :top :width :height :focus) props))
     (when (and left top)
       (cl-assert (and (numberp left) (numberp top)) t)
       (edie-wm-hypr--write 'moveactive 'exact left top))
 
     (when (and width height)
       (cl-assert (and (numberp width) (numberp height)) t)
-      (edie-wm-hypr--write 'resizeactive 'exact width height))))
+      (edie-wm-hypr--write 'resizeactive 'exact width height))
+
+    (when focus
+     (edie-wm-hypr--write 'focuswindow (format "address:0x%s" wid)) )))
 
 (defun edie-wm-hypr--current-window-id ()
   (when-let ((wnd (edie-wm-hypr--current-window)))
