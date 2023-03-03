@@ -243,7 +243,8 @@ switch to."
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
-  (map-elt edie-wm--window-list edie-wm--current-window-id))
+  (when edie-wm--current-window-id
+    (cdr (assoc edie-wm--current-window-id edie-wm--window-list))))
 
 (defun edie-wm-window-property (window propname)
   "Return the value of the property PROPNAME for WINDOW."
