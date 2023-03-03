@@ -65,10 +65,24 @@
     (let* ((update-function (lambda (&rest _) (edie-widget--refresh frame)))
            (edie-widget--install t))
       (set-frame-parameter frame 'edie-bar:spec spec)
-      (edie-widget--refresh frame)
+      (edie-widget--refresh-now frame)
       (edie-widget--setup edie-widget--setup-hooks update-function))))
 
+(defcustom edie-widget-refresh-debounce-time 0.1
+  "Time in seconds before the widgets are refreshed."
+  :type 'float)
+
+(defvar edie-widget--refresh-timer nil)
+
 (defun edie-widget--refresh (frame)
+  (when (timerp edie-widget--refresh-timer)
+    (cancel-timer edie-widget--refresh-timer))
+
+  (setq edie-widget--refresh-timer
+        (run-with-idle-timer edie-widget-refresh-debounce-time nil
+                             #'edie-widget--refresh-now frame)))
+
+(defun edie-widget--refresh-now (frame)
   ""
   (with-selected-frame frame
     (with-current-buffer (window-buffer (frame-root-window))
