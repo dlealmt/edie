@@ -75,28 +75,72 @@
     (dolist (line lines)
       (edie-wm-hypr--handle-event line))))
 
+(defvar edie-wm-hypr--event-queue nil)
+(defvar edie-wm-hypr--event-queue-timer nil)
+(defvar edie-wm-hypr--event-queue-interval 0.1)
+
+(defvar edie-wm-hypr--event-priority '(wnd-add wnd-focus dsk-focus wnd-rm))
+
+(defun edie-wm-hypr--insert-event (event)
+  "Push EVENT to the event queue.
+
+EVENT is a cons cell with the event type (a symbol) as its CAR, and the
+event data as its CDR.
+
+An event is placed in the queue according to its type.
+
+The following event types are supported (listed in order of priority):
+
+- `wnd-add': a window has been created;
+- `wnd-focus': the window with the given id has received focus;
+- `dsk-focus': the desktop with the given id has received focus;
+- `wnd-rm': a window has been removed."
+  (when (timerp edie-wm-hypr--event-queue-timer)
+    (cancel-timer edie-wm-hypr--event-queue-timer))
+
+  (let* ((prios edie-wm-hypr--event-priority)
+         (event-prio (seq-position prios (car event)))
+         (queue edie-wm-hypr--event-queue)
+         (curr (car queue)))
+    (while (and (setq curr (cadr queue))
+                (> (seq-position prios (car curr)) event-prio))
+      (setq queue (cdr queue)))
+    (if queue
+        (setcdr queue (cons event (cdr queue)))
+        (setq edie-wm-hypr--event-queue (list event)))
+
+    (setq edie-wm-hypr--event-queue-timer
+        (run-with-timer edie-wm-hypr--event-queue-interval nil #'edie-wm-hypr--flush-events))))
+
 (defun edie-wm-hypr--handle-event (event)
   (pcase event
     ((rx "activewindowv2>>" (let wid (+ hex)))
-     (let ((wnd (edie-wm-hypr--current-window)))
-       (when (equal (edie-wm-window-id wnd) wid)
-         (cond
-          ((equal (edie-wm-window-id wnd) edie-wm-hypr--current-window-id)
-           (edie-wm-on-window-update wid (edie-wm-window-properties wnd)))
-          (t
-           (setq edie-wm-hypr--current-window-id wid)
-           (edie-wm-on-window-focus wid)
-           (edie-wm-hypr--window-raise-active))))))
+     (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))
     ((rx "activewindowv2>>,")
-     (edie-wm-on-window-focus nil))
+     (edie-wm-hypr--insert-event (cons 'wnd-focus nil)))
     ((rx "openwindow>>" (let wid (+ hex)))
-     (edie-wm-on-window-add
-      (seq-find (lambda (w) (equal (edie-wm-window-id w) wid))
-                (edie-wm-hypr--window-list))))
+     (edie-wm-hypr--insert-event
+      (cons 'wnd-add (seq-find (lambda (w) (equal (edie-wm-window-id w) wid))
+                               (edie-wm-hypr--window-list)))))
     ((rx "closewindow>>" (let wid (+ hex)))
-     (edie-wm-on-window-remove wid))
-    ((rx "workspace>>" (let wid (+ digit)))
-     (edie-wm-on-desktop-focus-change))))
+     (edie-wm-hypr--insert-event (cons 'wnd-rm wid)))
+    ((rx "workspace>>" (let did (+ digit)))
+     (edie-wm-hypr--insert-event (cons 'dsk-focus did)))))
+
+(defun edie-wm-hypr--flush-events ()
+  (let ((queue edie-wm-hypr--event-queue))
+    (setq edie-wm-hypr--event-queue nil)
+
+    (dolist (event (nreverse queue))
+      (pcase event
+        (`(wnd-add . ,wnd)
+         (edie-wm-on-window-add wnd))
+        (`(wnd-focus . ,wid)
+         (edie-wm-on-window-focus wid))
+        (`(dsk-focus . ,_)
+         (edie-wm-on-desktop-focus-change))
+        (`(wnd-rm . ,wid)
+         (edie-wm-on-window-remove wid))))))
 
 (defun edie-wm-hypr--window-raise-active ()
   (edie-wm-hypr--write 'bringactivetotop))
