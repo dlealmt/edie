@@ -298,7 +298,8 @@
                             (height . ,(edie-widget-height node)))
                           (list
                            (dom-node 'rect `((width . "100%") (height . "100%") (fill . ,bg)))
-                           (dom-node 'text `((fill . ,fg)
+                           (dom-node 'text `(("xml:space" . "preserve")
+                                             (fill . ,fg)
                                              (y . ,(edie-widget-y node))
                                              (font-family . ,family)
                                              (font-weight . ,weight))
