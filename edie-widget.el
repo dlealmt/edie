@@ -290,6 +290,7 @@
              (fg (edie-widget--color-hex (edie-widget--face-attribute face :foreground)))
              (bg (edie-widget--color-hex (edie-widget--face-attribute face :background)))
              (family (edie-widget--face-attribute face :family))
+             (weight (edie-widget--face-attribute face :weight))
              (substr (substring-no-properties string from to))
              (svg-substr (edie-widget--make-svg-node
                           `((x . ,(+ (* from cwidth) pad-x))
@@ -299,7 +300,8 @@
                            (dom-node 'rect `((width . "100%") (height . "100%") (fill . ,bg)))
                            (dom-node 'text `((fill . ,fg)
                                              (y . ,(edie-widget-y node))
-                                             (font-family . ,family))
+                                             (font-family . ,family)
+                                             (font-weight . ,weight))
                                      (xml-escape-string substr))))))
         (dom-append-child svg svg-substr)
         (setq from to)))
