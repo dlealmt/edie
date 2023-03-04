@@ -77,7 +77,10 @@ See `command-error-function.'"
 (cl-defun edie-bar-minibuffer-svg-prompt ((str &rest args))
   "Transform STR into an SVG image and pass it on, along with ARGS."
   (with-selected-frame default-minibuffer-frame
-    (nconc (list (edie-widget-propertize str (funcall edie-bar-minibuffer-prompt-spec str))) args)))
+    (if (get-text-property 0 'display str)
+        (cons str args)
+      (let ((str-img (edie-widget-propertize str (funcall edie-bar-minibuffer-prompt-spec str))))
+        (nconc (list str-img) args)))))
 
 (defun edie-bar-minibuffer--svg-input-advice (&rest args)
   "Advice for read functions.
