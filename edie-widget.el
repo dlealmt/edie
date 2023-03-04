@@ -319,12 +319,8 @@
     svg))
 
 (defun edie-widget--face-attribute (faces attribute)
-  (let ((faces (append (ensure-list faces) '(default)))
-        value)
-    (while (not value)
-      (when-let ((face (pop faces)))
-        (setq value (face-attribute-specified-or (face-attribute face attribute) nil))))
-    value))
+  (seq-let (face &rest ancestors) (append (ensure-list faces) '(default))
+    (face-attribute face attribute nil ancestors)))
 
 (cl-defun edie-widget--stringify (spec)
   ""
