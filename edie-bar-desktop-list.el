@@ -54,18 +54,15 @@
       (setq used-desktops (plist-put used-desktops (edie-wm-window-property w :desktop) t)))
 
     `(box ((spacing . ,(or (dom-attr widget 'spacing) 8)))
-       ,@(let ((index 0)
-               icons)
-           (dolist (d (edie-wm-desktop-list) (nreverse icons))
-             (push `(icon ((name . ,(dom-attr widget 'icon))
-                           (size . ,(dom-attr widget 'icon-size))
-                           (color . ,(cond
-                                      ((= desktop-index index)
-                                       edie-bar-desktop-list-icon-color-active)
-                                      ((plist-get used-desktops index)
-                                       edie-bar-desktop-list-icon-color-used)))))
-                   icons)
-             (setq index (1+ index)))))))
+          ,@(mapcar (lambda (d)
+                      `(icon ((name . ,(dom-attr widget 'icon))
+                              (size . ,(dom-attr widget 'icon-size))
+                              (color . ,(cond
+                                         ((string= desktop-index (edie-wm-desktop-index d))
+                                          edie-bar-desktop-list-icon-color-active)
+                                         ((plist-get used-desktops (edie-wm-desktop-index d))
+                                          edie-bar-desktop-list-icon-color-used))))))
+                      (edie-wm-desktop-list)))))
 
 (provide 'edie-bar-desktop-list)
 ;;; edie-bar-desktop-list.el ends here

@@ -43,6 +43,7 @@
 
   (setq edie-wm-current-desktop-function #'edie-wm-hypr--current-desktop
         edie-wm-current-window-id-function #'edie-wm-hypr--current-window-id
+        edie-wm-desktop-id-list-function #'edie-wm-hypr--desktop-id-list
         edie-wm-focus-window-function #'edie-wm-hypr--window-focus
         edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
         edie-wm-update-window-function #'edie-wm-hypr--window-update
@@ -52,17 +53,23 @@
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-current-desktop-function
-        edie-wm-current-window-id-function
-        edie-wm-focus-window-function
-        edie-wm-set-desktop-function
-        edie-wm-update-window-function
-        edie-wm-window-list-function))
+  (setq edie-wm-current-desktop-function nil
+        edie-wm-current-window-id-function nil
+        edie-wm-focus-window-function nil
+        edie-wm-set-desktop-function nil
+        edie-wm-update-window-function nil
+        edie-wm-window-list-function nil))
 
 (defun edie-wm-hypr--current-desktop ()
   (let ((str (edie-wm-hypr--read 'monitors)))
     (when (string-match (rx "active workspace: " (group (+ digit))) str)
       (edie-wm-desktop-make nil (1- (string-to-number (match-string 1 str)))))))
+
+(defun edie-wm-hypr--desktop-id-list ()
+  (let ((ids nil))
+    (dotimes (i (length edie-wm-default-desktop-list))
+      (push (number-to-string (1+ i)) ids))
+    (nreverse ids)))
 
 (defun edie-wm-hypr--window-list ()
   (mapcar #'edie-wm-hypr--parse-window
@@ -199,7 +206,7 @@ The following event types are supported (listed in order of priority):
            (setq wprops (plist-put wprops :width (string-to-number w)))
            (setq wprops (plist-put wprops :height (string-to-number h))))
           ((rx bos "workspace: " (let ws (+ digit)) (+ anything) eos)
-           (setq wprops (plist-put wprops :desktop (1- (string-to-number ws)))))
+           (setq wprops (plist-put wprops :desktop ws)))
           ((rx bos "floating: 1" eos)
            (setq wprops (plist-put wprops :floating t)))
           ((rx bos "monitor: " (let mon (+ digit)) eos)

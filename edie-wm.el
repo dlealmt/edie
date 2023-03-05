@@ -30,6 +30,7 @@
   (require 'map))
 
 (defvar edie-wm-current-desktop-function nil)
+(defvar edie-wm-desktop-id-list-function nil)
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-set-desktop-function nil)
 (defvar edie-wm-window-make-function nil)
@@ -176,7 +177,10 @@ switch to."
 
 (defun edie-wm-desktop-list (&optional reload)
   "The list of virtual desktops."
-  (seq-map-indexed #'edie-wm-desktop-make edie-wm-default-desktop-list))
+  (cl-mapcar (lambda (name id)
+               (list 'desktop (list :name name) id))
+             edie-wm-default-desktop-list
+             (funcall edie-wm-desktop-id-list-function)))
 
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
@@ -389,6 +393,7 @@ Return nil or the list of windows that match the filters."
       (setq props (plist-put props :left 0)))
     (unless (plist-get props :top)
       (setq props (plist-put props :top 0)))
+
     (setf (map-elt edie-wm--window-list wid) window)
 
     (let ((edie-wm--current-window-id wid))
