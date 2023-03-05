@@ -397,10 +397,7 @@ Return nil or the list of windows that match the filters."
     (setf (map-elt edie-wm--window-list wid) window)
 
     (let ((edie-wm--current-window-id wid))
-      (run-hooks 'edie-wm-window-added-hook)
-
-      ;; TODO Remove once the hook is properly in place
-      window)))
+      (run-hooks 'edie-wm-window-added-hook))))
 
 (defun edie-wm-on-window-remove (wid)
   (when-let ((window (cdr (assoc wid edie-wm--window-list))))
