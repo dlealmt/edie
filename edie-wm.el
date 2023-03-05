@@ -380,7 +380,15 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-on-window-add (window)
   ;; TODO ensure that window still exists
-  (pcase-let (((seq 'window wid) window))
+  (pcase-let (((seq 'window wid props) window))
+    (unless (plist-get props :width)
+      (setq props (plist-put props :width 0)))
+    (unless (plist-get props :height)
+      (setq props (plist-put props :height 0)))
+    (unless (plist-get props :left)
+      (setq props (plist-put props :left 0)))
+    (unless (plist-get props :top)
+      (setq props (plist-put props :top 0)))
     (setf (map-elt edie-wm--window-list wid) window)
 
     (let ((edie-wm--current-window-id wid))
@@ -397,7 +405,8 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-on-window-update (wid changes)
   ;; TODO: check if window exists
-  (let* ((window (cdr (assoc wid edie-wm--window-list)))
+  (let* ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
+                     (edie-wm-current-window)))
          (props (edie-wm-window-properties window))
          (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)

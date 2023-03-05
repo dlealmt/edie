@@ -79,7 +79,8 @@
 (defvar edie-wm-hypr--event-queue-timer nil)
 (defvar edie-wm-hypr--event-queue-interval 0.1)
 
-(defvar edie-wm-hypr--event-priority '(wnd-add wnd-focus dsk-focus wnd-rm))
+(defvar edie-wm-hypr--event-priority
+  '(wnd-add wnd-focus wnd-upd dsk-focus wnd-rm))
 
 (defun edie-wm-hypr--insert-event (event)
   "Push EVENT to the event queue.
@@ -93,6 +94,7 @@ The following event types are supported (listed in order of priority):
 
 - `wnd-add': a window has been created;
 - `wnd-focus': the window with the given id has received focus;
+- `wnd-upd': the window with the given id has been updated;
 - `dsk-focus': the desktop with the given id has received focus;
 - `wnd-rm': a window has been removed."
   (when (timerp edie-wm-hypr--event-queue-timer)
@@ -114,14 +116,24 @@ The following event types are supported (listed in order of priority):
 
 (defun edie-wm-hypr--handle-event (event)
   (pcase event
+    ((rx "activewindow>>"
+         (let class (+ (not ","))) ","
+         (let title (+ (not ",")))
+         eos)
+     (edie-wm-hypr--insert-event
+      (list 'wnd-upd :class class :title title)))
     ((rx "activewindowv2>>" (let wid (+ hex)))
      (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))
     ((rx "activewindowv2>>,")
      (edie-wm-hypr--insert-event (cons 'wnd-focus nil)))
-    ((rx "openwindow>>" (let wid (+ hex)))
+    ((rx "openwindow>>"
+         (let wid (+ hex)) ","
+         (let did (+ digit)) ","
+         (let class (+ (not ","))) ","
+         (let title (+ (not ",")))
+         eos)
      (edie-wm-hypr--insert-event
-      (cons 'wnd-add (seq-find (lambda (w) (equal (edie-wm-window-id w) wid))
-                               (edie-wm-hypr--window-list)))))
+      (cons 'wnd-add (list 'window wid (list :desktop did :class class :title title)))))
     ((rx "closewindow>>" (let wid (+ hex)))
      (edie-wm-hypr--insert-event (cons 'wnd-rm wid)))
     ((rx "workspace>>" (let did (+ digit)))
@@ -137,6 +149,8 @@ The following event types are supported (listed in order of priority):
          (edie-wm-on-window-add wnd))
         (`(wnd-focus . ,wid)
          (edie-wm-on-window-focus wid))
+        ((seq 'wnd-upd &rest changes)
+         (edie-wm-on-window-update nil changes))
         (`(dsk-focus . ,_)
          (edie-wm-on-desktop-focus-change))
         (`(wnd-rm . ,wid)
