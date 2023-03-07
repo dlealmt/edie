@@ -285,7 +285,7 @@ Return nil or the list of windows that match the filters."
                 (edie-wm-window-filter-match-p filters window))
               (or windows (edie-wm-window-list))))
 
-(defun edie-wm-window-filter-match-p (filters window)
+(defun edie-wm-window-filter-match-p (filters &optional window)
   "Check whether WINDOW matches the given FILTERS."
   (pcase-let (((map (:class fclass)
                     (:desktop fdesktop)
@@ -304,8 +304,8 @@ Return nil or the list of windows that match the filters."
                                    (:title wtitle)
                                    (:top wtop)
                                    (:width wwidth)))
-               window))
-    (and (or (not fclass) (string-match-p fclass wclass))
+               (or window (edie-wm-current-window))))
+    (and window
          (or (not fdesktop) (equal fdesktop wdesktop))
          (or (not fheight) (equal fheight wheight))
          (or (not finstance) (string-match-p finstance winstance))
