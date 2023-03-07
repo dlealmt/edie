@@ -32,6 +32,7 @@
 (defvar edie-wm-current-desktop-function nil)
 (defvar edie-wm-desktop-id-list-function nil)
 (defvar edie-wm-focus-window-function nil)
+(defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
 (defvar edie-wm-window-make-function nil)
 (defvar edie-wm-current-window-id-function nil)
@@ -164,8 +165,10 @@ will be applied to windows matched by FILTERS."
 
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
-  (pcase (funcall edie-wm-current-desktop-function)
-    ((seq desktop _ id) (seq-elt (edie-wm-desktop-list) id))))
+  (let ((dsk-id (edie-wm-monitor-desktop (edie-wm-current-monitor))))
+    (seq-find (lambda (d)
+                (string= (edie-wm-desktop-index d) dsk-id))
+              (edie-wm-desktop-list))))
 
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
@@ -193,11 +196,6 @@ switch to."
                (choice (completing-read "Desktop: " desktops nil 'confirm))
                ((seq 'desktop _ desktop-id) (map-elt desktops choice)))
     desktop-id))
-
-(defun edie-wm-current-desktop ()
-  "The desktop we are currently working in."
-  (pcase (funcall edie-wm-current-desktop-function)
-    ((seq desktop _ id) (seq-elt (edie-wm-desktop-list) id))))
 
 (defun edie-wm-desktop-index (desktop)
   "Return the index of DESKTOP."
@@ -339,6 +337,19 @@ Return nil or the list of windows that match the filters."
   (seq-let (left top width height) (map-elt (car (display-monitor-attributes-list)) 'geometry)
     `(:left ,left :top ,top :width ,width :height ,height)))
 
+(cl-defstruct edie-wm-monitor id name x y width height focused desktop)
+
+(defalias 'edie-wm-monitor-focused-p 'edie-wm-monitor-focused)
+
+(defvar edie-wm--monitor-list nil)
+
+(defun edie-wm-current-monitor ()
+  (seq-find #'edie-wm-monitor-focused-p (edie-wm-monitor-list)))
+
+(defun edie-wm-monitor-list ()
+   (or edie-wm--monitor-list
+       (setq edie-wm--monitor-list (funcall edie-wm-monitor-list-function))))
+
 (defun edie-wm-geometry (plist)
   (pcase-let* (((map (:left wa-left) (:top wa-top) (:width wa-width) (:height wa-height))
                 (if (eq (map-elt plist :workarea) 'screen)
@@ -416,6 +427,8 @@ Return nil or the list of windows that match the filters."
     (run-hooks 'edie-wm-window-updated-hook)))
 
 (defun edie-wm-on-desktop-focus-change ()
+  (setf (edie-wm-monitor-desktop (edie-wm-current-monitor))
+        (funcall edie-wm-current-desktop-function))
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
 (defun edie-wm--adjust-margins (plist)
