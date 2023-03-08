@@ -307,6 +307,7 @@ Return nil or the list of windows that match the filters."
                                    (:width wwidth)))
                (or window (edie-wm-current-window))))
     (and window
+         (or (not fclass) (string-match-p fclass wclass))
          (or (not fdesktop) (equal fdesktop wdesktop))
          (or (not fheight) (equal fheight wheight))
          (or (not finstance) (string-match-p finstance winstance))
