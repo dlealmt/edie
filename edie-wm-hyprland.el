@@ -132,7 +132,7 @@ The following event types are supported (listed in order of priority):
          (let title (+ (not ",")))
          eos)
      (edie-wm-hypr--insert-event
-      (list 'wnd-upd :class class :title title)))
+      (list 'wnd-upd nil :class class :title title)))
     ((rx "activewindowv2>>" (let wid (+ hex)))
      (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))
     ((rx "activewindowv2>>,")
@@ -145,6 +145,8 @@ The following event types are supported (listed in order of priority):
          eos)
      (edie-wm-hypr--insert-event
       (cons 'wnd-add (list 'window wid (list :desktop did :class class :title title)))))
+    ((rx "movewindow>>" (let wid (+ hex)) "," (let did (+ digit)))
+     (edie-wm-hypr--insert-event (list 'wnd-upd wid :desktop did)))
     ((rx "closewindow>>" (let wid (+ hex)))
      (edie-wm-hypr--insert-event (cons 'wnd-rm wid)))
     ((rx "focusedmon>>" (let mon (+ (not ","))) "," (let did (+ any)))
