@@ -88,7 +88,7 @@
 (defvar edie-wm-hypr--event-queue-interval 0.1)
 
 (defvar edie-wm-hypr--event-priority
-  '(wnd-add mon-focus wnd-focus wnd-upd dsk-focus wnd-rm))
+  '(wnd-add mon-focus wnd-focus wnd-upd dsk-focus wnd-rm mon-add mon-rm))
 
 (defun edie-wm-hypr--insert-event (event)
   "Push EVENT to the event queue.
@@ -105,7 +105,9 @@ The following event types are supported (listed in order of priority):
 - `wnd-focus': the window with the given id has received focus;
 - `wnd-upd': the window with the given id has been updated;
 - `dsk-focus': the desktop with the given id has received focus;
-- `wnd-rm': a window has been removed."
+- `wnd-rm': a window has been removed;
+- `mon-add': a monitor has been added;
+- `mon-rm': a monitor has been removed."
   (when (timerp edie-wm-hypr--event-queue-timer)
     (cancel-timer edie-wm-hypr--event-queue-timer))
 
@@ -149,7 +151,11 @@ The following event types are supported (listed in order of priority):
      (edie-wm-hypr--insert-event (cons 'mon-focus mon))
      (edie-wm-hypr--insert-event (cons 'dsk-focus did)))
     ((rx "workspace>>" (let did (+ digit)))
-     (edie-wm-hypr--insert-event (cons 'dsk-focus did)))))
+     (edie-wm-hypr--insert-event (cons 'dsk-focus did)))
+    ((rx "monitoradded>>" (let name (+ any)))
+     (edie-wm-hypr--insert-event (cons 'mon-add name)))
+    ((rx "monitorremoved>>" (let name (+ any)))
+     (edie-wm-hypr--insert-event (cons 'mon-rm name)))))
 
 (defun edie-wm-hypr--flush-events ()
   (let ((queue edie-wm-hypr--event-queue))
@@ -168,7 +174,11 @@ The following event types are supported (listed in order of priority):
         (`(dsk-focus . ,_)
          (edie-wm-on-desktop-focus-change))
         (`(wnd-rm . ,wid)
-         (edie-wm-on-window-remove wid))))))
+         (edie-wm-on-window-remove wid))
+        (`(mon-add . ,mid)
+         (edie-wm-on-monitor-add mid))
+        (`(mon-rm . ,mid)
+         (edie-wm-on-monitor-remove mid))))))
 
 (defun edie-wm-hypr--window-raise-active ()
   (edie-wm-hypr--write 'bringactivetotop))
@@ -256,8 +266,8 @@ The following event types are supported (listed in order of priority):
         ((rx (let width (+ digit)) "x" (let height (+ digit))
              (+ (not space)) " at "
              (let x (+ digit)) "x" (let y (+ digit)))
-         (setf (edie-wm-monitor-x monitor) (string-to-number x))
-         (setf (edie-wm-monitor-y monitor) (string-to-number y))
+         (setf (edie-wm-monitor-left monitor) (string-to-number x))
+         (setf (edie-wm-monitor-top monitor) (string-to-number y))
          (setf (edie-wm-monitor-width monitor) (string-to-number width))
          (setf (edie-wm-monitor-height monitor) (string-to-number height)))
         ((rx bos "focused: yes")

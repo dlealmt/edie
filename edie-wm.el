@@ -64,7 +64,8 @@
   "A list of desktop names."
   :type '(repeat string))
 
-(defcustom edie-wm-desktop-padding '(:left 0 :top 0 :bottom 0 :right 0)
+(defcustom edie-wm-desktop-padding-alist
+  '((nil . (:left 0 :top 0 :bottom 0 :right 0))
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
   :type 'edie-wm-geometry)
 
@@ -321,23 +322,7 @@ Return nil or the list of windows that match the filters."
     (setf (map-elt edie-wm--window-list wid) (list 'window wid (map-merge 'plist props plist)))
     (funcall edie-wm-update-window-function wid plist)))
 
-(defun edie-wm-workarea ()
-  (pcase-let* (((map (:left p-left)
-                     (:top p-top)
-                     (:right p-right)
-                     (:bottom p-bot))
-                edie-wm-desktop-padding)
-               ((map :left :top :width :height) (edie-wm-screenarea)))
-    `(:left ,(+ left p-left)
-      :top ,(+ top p-top)
-      :width ,(- width p-left p-right)
-      :height ,(- height p-top p-bot))))
-
-(defun edie-wm-screenarea ()
-  (seq-let (left top width height) (map-elt (car (display-monitor-attributes-list)) 'geometry)
-    `(:left ,left :top ,top :width ,width :height ,height)))
-
-(cl-defstruct edie-wm-monitor id name x y width height focused desktop)
+(cl-defstruct edie-wm-monitor id name left top width height focused desktop)
 
 (defalias 'edie-wm-monitor-focused-p 'edie-wm-monitor-focused)
 
@@ -349,6 +334,34 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-monitor-list ()
    (or edie-wm--monitor-list
        (setq edie-wm--monitor-list (funcall edie-wm-monitor-list-function))))
+
+(defun edie-wm-on-monitor-focus-change (name)
+  (dolist (m (edie-wm-monitor-list))
+    (setf (edie-wm-monitor-focused m) (string= (edie-wm-monitor-name m) name))))
+
+(defun edie-wm-on-monitor-add (name)
+  (setq edie-wm--monitor-list nil))
+
+(defun edie-wm-on-monitor-remove (name)
+  (setq edie-wm--monitor-list nil))
+
+(defun edie-wm-workarea ()
+  (pcase-let* ((mon (edie-wm-current-monitor))
+               ((map (:left p-left)
+                     (:top p-top)
+                     (:right p-right)
+                     (:bottom p-bot))
+                (cdr (or (assoc (edie-wm-monitor-name mon) edie-wm-desktop-padding)
+                         (assoc nil edie-wm-desktop-padding))))
+               ((map :left :top :width :height) (edie-wm-screenarea)))
+    `(:left ,(+ left p-left)
+      :top ,(+ top p-top)
+      :width ,(- width p-left p-right)
+      :height ,(- height p-top p-bot))))
+
+(defun edie-wm-screenarea ()
+  (pcase-let (((cl-struct edie-wm-monitor left top width height) (edie-wm-current-monitor)))
+    `(:left ,left :top ,top :width ,width :height ,height)))
 
 (defun edie-wm-geometry (plist)
   (pcase-let* (((map (:left wa-left) (:top wa-top) (:width wa-width) (:height wa-height))
