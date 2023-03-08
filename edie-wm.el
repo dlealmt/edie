@@ -65,7 +65,7 @@
   :type '(repeat string))
 
 (defcustom edie-wm-desktop-padding-alist
-  '((nil . (:left 0 :top 0 :bottom 0 :right 0))
+  '((nil . (:left 0 :top 0 :bottom 0 :right 0)))
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
   :type 'edie-wm-geometry)
 
