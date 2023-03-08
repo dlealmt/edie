@@ -431,11 +431,10 @@ Return nil or the list of windows that match the filters."
     (setq edie-wm--window-list (delete (assoc wid edie-wm--window-list) edie-wm--window-list))))
 
 (defun edie-wm-on-window-update (wid changes)
-  ;; TODO: check if window exists
-  (let* ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
-                     (edie-wm-current-window)))
-         (props (edie-wm-window-properties window))
-         (edie-wm--current-window-id wid))
+  (when-let ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
+                         (edie-wm-current-window)))
+             (props (edie-wm-window-properties window))
+             (edie-wm--current-window-id wid))
     (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
 
     (run-hooks 'edie-wm-window-updated-hook)))
