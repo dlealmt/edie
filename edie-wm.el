@@ -34,7 +34,6 @@
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
-(defvar edie-wm-window-make-function nil)
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
@@ -44,8 +43,6 @@
 (defvar edie-wm--window-list nil)
 
 (defvar edie-wm--current-window-id nil)
-
-(defconst edie-wm--window-properties-slot 2)
 
 (defgroup edie-wm nil
   "Window manager settings."
@@ -206,29 +203,21 @@ switch to."
   "Make a desktop instance."
   `(desktop (:name ,name) ,id))
 
+(cl-defstruct edie-wm-window
+  id (left 0) (top 0) (width 0) (height 0) desktop class instance title)
+
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
   (funcall edie-wm-focus-window-function (edie-wm-window-id window)))
 
-(defun edie-wm-window-id (window)
-  "Return the ID of WINDOW."
-  (pcase-let (((seq 'window wid) window))
-    (cl-assert wid t)
-    wid))
-
-(defun edie-wm-window-properties (window)
-  "Return the properties of WINDOW."
-  (cl-assert window t)
-  (nth edie-wm--window-properties-slot window))
-
 (defun edie-wm-select-window ()
   "Prompt for a window."
-  (let ((indexed (seq-map (pcase-lambda ((seq 'window wid (map :title)))
-                            (cl-assert wid)
+  (let ((indexed (seq-map (pcase-lambda ((cl-struct edie-wm-window id title))
+                            (cl-assert id)
                             (cons (format "%s%s"
-                                          (propertize (number-to-string wid) 'invisible t)
+                                          (propertize (number-to-string id) 'invisible t)
                                           title)
-                                  wid))
+                                  id))
                           (edie-wm-window-list))))
     (map-elt indexed (completing-read "Window: " indexed))))
 
@@ -249,10 +238,6 @@ switch to."
   (when edie-wm--current-window-id
     (cdr (assoc edie-wm--current-window-id edie-wm--window-list))))
 
-(defun edie-wm-window-property (window propname)
-  "Return the value of the property PROPNAME for WINDOW."
-  (plist-get (edie-wm-window-properties window) propname))
-
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
   (seq-find (lambda (wnd) (edie-wm-window-filter-match-p filters wnd)) (edie-wm-window-list)))
@@ -263,8 +248,9 @@ switch to."
 
 (defun edie-wm-reset-window-list ()
   "Reload the window list."
-  (let ((windows (seq-map (pcase-lambda ((and window (seq 'window wid)))
-                            (cons wid window))
+  (interactive)
+  (let ((windows (seq-map (pcase-lambda ((and window (cl-struct edie-wm-window id)))
+                            (cons id window))
                           (funcall edie-wm-window-list-function))))
 
     (setq edie-wm--window-list windows)))
@@ -288,40 +274,27 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-window-filter-match-p (filters &optional window)
   "Check whether WINDOW matches the given FILTERS."
-  (pcase-let (((map (:class fclass)
-                    (:desktop fdesktop)
-                    (:height fheight)
-                    (:instance finstance)
-                    (:left fleft)
-                    (:title ftitle)
-                    (:top ftop)
-                    (:width fwidth))
-               filters)
-              ((seq 'window _ (map (:class wclass)
-                                   (:desktop wdesktop)
-                                   (:height wheight)
-                                   (:instance winstance)
-                                   (:left wleft)
-                                   (:title wtitle)
-                                   (:top wtop)
-                                   (:width wwidth)))
-               (or window (edie-wm-current-window))))
+  (pcase-let (((map :class :desktop :height :instance :left :title :top :width) filters)
+              (window (or window (edie-wm-current-window))))
     (and window
-         (or (not fclass) (string-match-p fclass wclass))
-         (or (not fdesktop) (equal fdesktop wdesktop))
-         (or (not fheight) (equal fheight wheight))
-         (or (not finstance) (string-match-p finstance winstance))
-         (or (not fleft) (equal fleft wleft))
-         (or (not ftitle) (string-match-p ftitle wtitle))
-         (or (not ftop) (equal ftop wtop))
-         (or (not fwidth) (equal fwidth wwidth)))))
+         (or (not class) (string-match-p class (edie-wm-window-class window)))
+         (or (not desktop) (equal desktop (edie-wm-window-desktop window)))
+         (or (not height) (equal height (edie-wm-window-height window)))
+         (or (not instance) (string-match-p instance (edie-wm-window-instance window)))
+         (or (not left) (equal left (edie-wm-window-left window)))
+         (or (not title) (string-match-p title (edie-wm-window-title window)))
+         (or (not top) (equal top (edie-wm-window-top window)))
+         (or (not width) (equal width (edie-wm-window-width window))))))
 
 (defun edie-wm-update-window (window plist)
-  (pcase-let (((seq 'window wid props) window)
-              (plist (map-merge 'plist plist (edie-wm-geometry plist)
-                                `(:border ,edie-wm-window-border-width))))
-    (setf (map-elt edie-wm--window-list wid) (list 'window wid (map-merge 'plist props plist)))
-    (funcall edie-wm-update-window-function wid plist)))
+  ""
+  (pcase-let* (((and geom (map :left :top :width :height)) (edie-wm-geometry plist))
+               (changes (map-merge 'plist geom `(:border ,edie-wm-window-border-width))))
+    (setf (edie-wm-window-left window) left
+          (edie-wm-window-top window) top
+          (edie-wm-window-width window) width
+          (edie-wm-window-height window) height)
+    (funcall edie-wm-update-window-function (edie-wm-window-id window) changes)))
 
 (cl-defstruct edie-wm-monitor id name left top width height focused desktop)
 
@@ -409,20 +382,10 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-on-window-add (window)
   ;; TODO ensure that window still exists
-  (pcase-let (((seq 'window wid props) window))
-    (unless (plist-get props :width)
-      (setq props (plist-put props :width 0)))
-    (unless (plist-get props :height)
-      (setq props (plist-put props :height 0)))
-    (unless (plist-get props :left)
-      (setq props (plist-put props :left 0)))
-    (unless (plist-get props :top)
-      (setq props (plist-put props :top 0)))
+  (setf (map-elt edie-wm--window-list (edie-wm-window-id window)) window)
 
-    (setf (map-elt edie-wm--window-list wid) window)
-
-    (let ((edie-wm--current-window-id wid))
-      (run-hooks 'edie-wm-window-added-hook))))
+  (let ((edie-wm--current-window-id (edie-wm-window-id window)))
+    (run-hooks 'edie-wm-window-added-hook)))
 
 (defun edie-wm-on-window-remove (wid)
   (when-let ((window (cdr (assoc wid edie-wm--window-list))))
@@ -433,10 +396,16 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-window-update (wid changes)
   (when-let ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
                          (edie-wm-current-window)))
-             (props (edie-wm-window-properties window))
              (edie-wm--current-window-id wid))
-    (map-do (lambda (k v) (setf props (plist-put props k v))) changes)
-
+    (pcase-let (((map :class :desktop :height :instance :left :title :top :width) changes))
+      (setf (edie-wm-window-class window) class
+            (edie-wm-window-desktop window) desktop
+            (edie-wm-window-height window) height
+            (edie-wm-window-instance window) instance
+            (edie-wm-window-left window) left
+            (edie-wm-window-title window) title
+            (edie-wm-window-top window) top
+            (edie-wm-window-width window) width))
     (run-hooks 'edie-wm-window-updated-hook)))
 
 (defun edie-wm-on-desktop-focus-change ()
@@ -466,11 +435,15 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm--apply-rules ()
   (let* ((window (edie-wm-current-window))
-         (rules (and window (edie-wm--find-rule window)))
-         (props (and window (edie-wm-window-properties window))))
-    (when (and rules (not (map-every-p (lambda (k v)
-                                         (equal (plist-get props k) v))
-                                       rules)))
+         (rules (and window (edie-wm--find-rule window))))
+    (unless (and (equal (edie-wm-window-left window) (plist-get rules :left))
+                 (equal (edie-wm-window-top window) (plist-get rules :top))
+                 (equal (edie-wm-window-width window) (plist-get rules :width))
+                 (equal (edie-wm-window-height window) (plist-get rules :height))
+                 (equal (edie-wm-window-desktop window) (plist-get rules :desktop))
+                 (equal (edie-wm-window-class window) (plist-get rules :class))
+                 (equal (edie-wm-window-instance window) (plist-get rules :instance))
+                 (equal (edie-wm-window-title window) (plist-get rules :title)))
       (edie-wm-update-window window rules))))
 
 (defun edie-wm--find-rule (window)
@@ -516,7 +489,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-window-tile (window)
   "Return the tile that WINDOW is in."
-  (pcase-let (((seq 'window _ (map :left :top :width :height)) window))
+  (pcase-let (((cl-struct edie-wm-window left top width height) window))
     (car-safe (seq-find
                (pcase-lambda (`(,_ . ,(map (:left tl) (:top tt) (:width tw) (:height th))))
                  (and (= left tl) (= top tt) (= width tw) (= height th)))
