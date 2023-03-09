@@ -144,7 +144,7 @@ The following event types are supported (listed in order of priority):
          (let title (+ (not ",")))
          eos)
      (edie-wm-hypr--insert-event
-      (cons 'wnd-add (make-edie-wm-window :id wid  :desktop did :class class :title title))))
+      (cons 'wnd-add (make-edie-wm-window :id wid :desktop did :class class :title title))))
     ((rx "movewindow>>" (let wid (+ hex)) "," (let did (+ digit)))
      (edie-wm-hypr--insert-event (list 'wnd-upd wid :desktop did)))
     ((rx "closewindow>>" (let wid (+ hex)))
