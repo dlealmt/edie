@@ -65,6 +65,7 @@
   '((nil . (:left 0 :top 0 :bottom 0 :right 0)))
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
   :type 'edie-wm-geometry)
+  :type '(repeat (alist :key-type symbol :value-type edie-wm-geometry)))
 
 (defcustom edie-wm-window-margins 0
   "The amount of whitespace, in pixels, surrounding each window."
@@ -112,13 +113,13 @@ attribute which will be used to match against windows.
 
 ATTRIBUTES is a plist, where each keyword is an attribute that
 will be applied to windows matched by FILTERS."
-  :type '(alist
-          :key-type (plist :key-type keyword :value-type string)
-          :value-type (plist :key-type keyword :value-type string)))
+  :type '(choice (const nil)
+                 (alist :key-type (plist :key-type symbol :value-type sexp)
+                        :value-type (plist :key-type symbol :value-type sexp))))
 
 (defcustom edie-wm-tile-alist nil
   "Alist of tiles."
-  :type '(alist :key-type keyword :value-type sexp))
+  :type '(choice (const nil) (alist :key-type symbol :value-type sexp)))
 
 (defcustom edie-wm-tile-commands nil
   "Tile commands to be auto-generated."
