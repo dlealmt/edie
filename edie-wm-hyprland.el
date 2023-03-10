@@ -33,7 +33,7 @@
 (defvar edie-wm-hypr--conn-events nil)
 (defvar edie-wm-hypr--current-window-id nil)
 
-(defun edie-wm-hyprland-start ()
+(defun edie-wm-backend-start ()
   (setq edie-wm-hypr--conn-events (make-network-process
                                    :service (edie-wm-hypr--socket-path "socket2")
                                    :name "edie-wm-hyprland-events"
@@ -41,7 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local)))
 
-(defun edie-wm-hyprland-stop ()
+(defun edie-wm-backend-stop ()
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil))
 

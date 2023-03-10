@@ -144,11 +144,10 @@ will be applied to windows matched by FILTERS."
   nil
   :global t
   (if edie-wm-mode
-      (let ((backend (intern (format "edie-wm-%s" edie-wm-backend)))
-            (start-fn (intern (format "edie-wm-%s-start" edie-wm-backend))))
+      (let ((backend (intern (format "edie-wm-%s" edie-wm-backend))))
         (require backend)
 
-        (funcall start-fn)
+        (edie-wm-backend-start)
 
         (edie-wm-reset-window-list)
 
