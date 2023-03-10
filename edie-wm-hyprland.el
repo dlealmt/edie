@@ -41,8 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-desktop-id-list-function #'edie-wm-hypr--desktop-id-list
-        edie-wm-focus-window-function #'edie-wm-hypr--window-focus
+  (setq edie-wm-focus-window-function #'edie-wm-hypr--window-focus
         edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
         edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
         edie-wm-update-window-function #'edie-wm-hypr--window-update
@@ -62,7 +61,7 @@
     (when (string-match (rx "active workspace: " (group (+ digit))) str)
       (match-string 1 str))))
 
-(defun edie-wm-hypr--desktop-id-list ()
+(defun edie-wm-backend-desktop-id-list ()
   (let ((ids nil))
     (dotimes (i (length edie-wm-default-desktop-list))
       (push (number-to-string (1+ i)) ids))

@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-desktop-id-list-function nil)
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
@@ -184,7 +183,7 @@ switch to."
   (cl-mapcar (lambda (name id)
                (list 'desktop (list :name name) id))
              edie-wm-default-desktop-list
-             (funcall edie-wm-desktop-id-list-function)))
+             (edie-wm-backend-desktop-id-list)))
 
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
