@@ -41,8 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-focus-window-function #'edie-wm-hypr--window-focus
-        edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
+  (setq edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
         edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
         edie-wm-update-window-function #'edie-wm-hypr--window-update
         edie-wm-window-list-function #'edie-wm-hypr--window-list))
@@ -51,8 +50,7 @@
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-focus-window-function nil
-        edie-wm-set-desktop-function nil
+  (setq edie-wm-set-desktop-function nil
         edie-wm-update-window-function nil
         edie-wm-window-list-function nil))
 
@@ -184,7 +182,7 @@ The following event types are supported (listed in order of priority):
 (defun edie-wm-hypr--window-raise-active ()
   (edie-wm-hypr--write 'bringactivetotop))
 
-(defun edie-wm-hypr--window-focus (wid)
+(defun edie-wm-backend-window-focus (wid)
   (edie-wm-hypr--window-update wid '(:focus t)))
 
 (defun edie-wm-hypr--window-update (wid props)

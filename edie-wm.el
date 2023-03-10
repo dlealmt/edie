@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
 (defvar edie-wm-update-window-function nil)
@@ -221,7 +220,7 @@ switch to."
           edie-wm--current-window-id wid)
     (push elt edie-wm--window-list)
 
-    (funcall edie-wm-focus-window-function wid)
+    (edie-wm-backend-window-focus wid)
     (run-hooks 'edie-wm-window-focus-changed-hook)))
 
 (defun edie-wm-select-window ()
