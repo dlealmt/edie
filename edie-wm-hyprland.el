@@ -39,15 +39,11 @@
                                    :name "edie-wm-hyprland-events"
                                    :buffer "*edie-wm-hyprland-events*"
                                    :filter #'edie-wm-hypr--conn-events-filter
-                                   :family 'local))
-
-  (setq edie-wm-window-list-function #'edie-wm-hypr--window-list))
+                                   :family 'local)))
 
 (defun edie-wm-hyprland-stop ()
   (delete-process edie-wm-hypr--conn-events)
-  (setq edie-wm-hypr--conn-events nil)
-
-  (setq edie-wm-window-list-function nil))
+  (setq edie-wm-hypr--conn-events nil))
 
 (defun edie-wm-backend-current-desktop-id ()
   (let ((str (edie-wm-hypr--read 'monitors)))
@@ -60,7 +56,7 @@
       (push (number-to-string (1+ i)) ids))
     (nreverse ids)))
 
-(defun edie-wm-hypr--window-list ()
+(defun edie-wm-backend-window-list ()
   (mapcar #'edie-wm-hypr--parse-window
           (split-string (edie-wm-hypr--read 'clients) "\n\n" t "[[:space:]\n]+")))
 

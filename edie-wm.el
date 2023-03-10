@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-window-list-function nil)
 (defvar edie-wm-window-raise-function nil)
 
 (defvar edie-wm-window-close-functions nil)
@@ -265,7 +264,7 @@ switch to."
   "Reload the window list."
   (interactive)
   (let ((windows nil))
-    (dolist (w (funcall edie-wm-window-list-function))
+    (dolist (w (edie-wm-backend-window-list))
       (edie-wm-update-window w (edie-wm--apply-rules w))
       (push (cons (edie-wm-window-id w) w) windows))
     (setq edie-wm--window-list windows)))
