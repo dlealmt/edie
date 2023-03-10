@@ -41,8 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-current-desktop-function #'edie-wm-hypr--current-desktop
-        edie-wm-current-window-id-function #'edie-wm-hypr--current-window-id
+  (setq edie-wm-current-window-id-function #'edie-wm-hypr--current-window-id
         edie-wm-desktop-id-list-function #'edie-wm-hypr--desktop-id-list
         edie-wm-focus-window-function #'edie-wm-hypr--window-focus
         edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
@@ -54,14 +53,13 @@
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-current-desktop-function nil
-        edie-wm-current-window-id-function nil
+  (setq edie-wm-current-window-id-function nil
         edie-wm-focus-window-function nil
         edie-wm-set-desktop-function nil
         edie-wm-update-window-function nil
         edie-wm-window-list-function nil))
 
-(defun edie-wm-hypr--current-desktop ()
+(defun edie-wm-backend-current-desktop-id ()
   (let ((str (edie-wm-hypr--read 'monitors)))
     (when (string-match (rx "active workspace: " (group (+ digit))) str)
       (match-string 1 str))))

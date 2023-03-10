@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-current-desktop-function nil)
 (defvar edie-wm-desktop-id-list-function nil)
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-monitor-list-function nil)
@@ -473,7 +472,7 @@ Return nil or the list of windows that match the filters."
       (edie-wm-update-window window more-changes))))
 
 (defun edie-wm-on-desktop-focus-change ()
-  (let ((desktop-id (funcall edie-wm-current-desktop-function)))
+  (let ((desktop-id (edie-wm-backend-current-desktop-id)))
     (setf (edie-wm-monitor-desktop (edie-wm-current-monitor)) desktop-id)
     (if-let ((window (car (edie-wm-window-filter-list (list :desktop desktop-id)))))
         (edie-wm-focus-window window)
