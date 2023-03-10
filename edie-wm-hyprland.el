@@ -41,16 +41,14 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
-        edie-wm-update-window-function #'edie-wm-hypr--window-update
+  (setq edie-wm-update-window-function #'edie-wm-hypr--window-update
         edie-wm-window-list-function #'edie-wm-hypr--window-list))
 
 (defun edie-wm-hyprland-stop ()
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-set-desktop-function nil
-        edie-wm-update-window-function nil
+  (setq edie-wm-update-window-function nil
         edie-wm-window-list-function nil))
 
 (defun edie-wm-backend-current-desktop-id ()

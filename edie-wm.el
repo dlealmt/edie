@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-set-desktop-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
 (defvar edie-wm-window-raise-function nil)
@@ -174,7 +173,7 @@ will be applied to windows matched by FILTERS."
 When called interactively, prompt for the desktop we want to
 switch to."
   (interactive (list (edie-wm-select-desktop)))
-  (funcall edie-wm-set-desktop-function desktop))
+  (edie-wm-backend-desktop-focus desktop))
 
 (defun edie-wm-desktop-list (&optional reload)
   "The list of virtual desktops."
