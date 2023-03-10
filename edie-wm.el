@@ -29,8 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-window-raise-function nil)
-
 (defvar edie-wm-window-close-functions nil)
 
 (defvar edie-wm--window-list nil)
