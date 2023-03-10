@@ -88,7 +88,7 @@
 (defvar edie-wm-hypr--event-queue-interval 0.1)
 
 (defvar edie-wm-hypr--event-priority
-  '(wnd-add mon-focus wnd-focus wnd-upd dsk-focus wnd-rm mon-add mon-rm))
+  '(dsk-focus wnd-add mon-focus wnd-focus wnd-upd wnd-rm mon-add mon-rm))
 
 (defun edie-wm-hypr--insert-event (event)
   "Push EVENT to the event queue.
@@ -100,11 +100,11 @@ An event is placed in the queue according to its type.
 
 The following event types are supported (listed in order of priority):
 
+- `dsk-focus': the desktop with the given id has received focus;
 - `wnd-add': a window has been created;
 - `mon-focus': the active monitor has changed;
 - `wnd-focus': the window with the given id has received focus;
 - `wnd-upd': the window with the given id has been updated;
-- `dsk-focus': the desktop with the given id has received focus;
 - `wnd-rm': a window has been removed;
 - `mon-add': a monitor has been added;
 - `mon-rm': a monitor has been removed."
@@ -127,14 +127,18 @@ The following event types are supported (listed in order of priority):
 
 (defun edie-wm-hypr--handle-event (event)
   (pcase event
-    ((rx "activewindow>>"
-         (let class (+ (not ","))) ","
-         (let title (+ (not ",")))
-         eos)
-     (edie-wm-hypr--insert-event
-      (list 'wnd-upd nil :class class :title title)))
     ((rx "activewindowv2>>" (let wid (+ hex)))
-     (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))
+     (let ((window (edie-wm-hypr--current-window)))
+       (when (equal wid (edie-wm-window-id window))
+         (edie-wm-hypr--insert-event
+          (list 'wnd-upd wid
+                :class (edie-wm-window-class window)
+                :title (edie-wm-window-title window)
+                :left (edie-wm-window-left window)
+                :top (edie-wm-window-top window)
+                :width (edie-wm-window-width window)
+                :height (edie-wm-window-height window)))
+         (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))))
     ((rx "activewindowv2>>,")
      (edie-wm-hypr--insert-event (cons 'wnd-focus nil)))
     ((rx "openwindow>>"
@@ -201,7 +205,10 @@ The following event types are supported (listed in order of priority):
       (edie-wm-hypr--write 'resizeactive 'exact width height))
 
     (when focus
-     (edie-wm-hypr--write 'focuswindow (format "address:0x%s" wid)) )))
+      (edie-wm-hypr--write 'focuswindow (format "address:0x%s" wid)))
+
+    (when monitor
+      (edie-wm-hypr--write 'movewindow monitor))))
 
 (defun edie-wm-hypr--current-window-id ()
   (when-let ((wnd (edie-wm-hypr--current-window)))

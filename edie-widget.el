@@ -149,7 +149,7 @@
 
 (defun edie-widget-inner-width (node)
   (let-alist (dom-attributes node)
-    (- .width (* (or .pad-x 0) 2))))
+    (- (edie-widget-width node) (* (or .pad-x 0) 2))))
 
 ;; frame
 (cl-defmethod edie-widget-width ((frame (head frame)))
@@ -166,43 +166,64 @@
 
 ;; box
 (cl-defmethod edie-widget-width ((box (head box)))
-  (if-let ((w (dom-attr box 'width)))
-      w
-    (let ((total 0)
-          (spacing (or (dom-attr box 'spacing) 0))
-          (pad-x (or (dom-attr box 'pad-x) 0))
-          (pad-left (or (dom-attr box 'pad-left) 0)))
-      (dolist (c (edie-widget--children box))
-        (when-let ((w (edie-widget-width c)))
-          (setq total (+ total w))))
-      (+ total (* (1- (length (dom-children box))) spacing) (* pad-x 2) pad-left))))
+  (let ((width (dom-attr box 'width)))
+    (cond
+     ((floatp width)
+      (round (* width (edie-widget-inner-width (dom-parent edie-widget--dom box)))))
+     ((integerp width)
+      width)
+     ((null width)
+      (let ((total 0)
+            (spacing (or (dom-attr box 'spacing) 0))
+            (pad-x (or (dom-attr box 'pad-x) 0))
+            (pad-left (or (dom-attr box 'pad-left) 0)))
+        (dolist (c (edie-widget--children box))
+          (when-let ((w (edie-widget-width c)))
+            (setq total (+ total w))))
+        (+ total (* (1- (length (dom-children box))) spacing) (* pad-x 2) pad-left)))
+     (t
+      (error "Invalid width: %s" width)))))
 
 (cl-defmethod edie-widget-height ((box (head box)))
-  (edie-widget-height (edie-widget--parent box)))
+  (or (dom-attr box 'height) (edie-widget-height (edie-widget--parent box))))
 
 (cl-defmethod edie-widget-x ((box (head box)))
   (edie-widget-child-x (edie-widget--parent box) box))
 
-(cl-defmethod edie-widget-y ((_ (head box)))
-  0)
+(cl-defmethod edie-widget-y ((box (head box)))
+  (or (dom-attr box 'y) 0))
 
 (cl-defmethod edie-widget-child-x ((box (head box)) child)
   (+ (or (dom-attr box 'pad-x) 0)
      (or (dom-attr box 'pad-left) 0)
-     (cond
-      ((eq (dom-attr child 'align) 'right)
-       (edie-widget-inner-width box))
-      ((eq (dom-attr child 'align) 'center)
-       (/ (edie-widget-inner-width box) 2))
-      (t
-       (pcase-let* ((x 0)
-                    (spacing (or (dom-attr box 'spacing) 0))
-                    ((seq head &rest rest) (edie-widget--children box)))
-         (while (and head (not (eq head child)))
-           (setq x (+ x (edie-widget-width head) spacing))
-           (setq head (car rest)
-                 rest (cdr rest)))
-         x)))))
+     (if (or (not (dom-attr box 'direction)) (eq (dom-attr box 'direction) 'row))
+         (cond
+          ((eq (dom-attr child 'align) 'right)
+           (edie-widget-inner-width box))
+          ((eq (dom-attr child 'align) 'center)
+           (/ (edie-widget-inner-width box) 2))
+          (t
+           (pcase-let* ((x 0)
+                        (spacing (or (dom-attr box 'spacing) 0))
+                        ((seq head &rest rest) (edie-widget--children box)))
+             (while (and head (not (eq head child)))
+               (setq x (+ x (edie-widget-width head) spacing))
+               (setq head (car rest)
+                     rest (cdr rest)))
+             x)))
+       0)))
+
+(cl-defmethod edie-widget-child-y ((box (head box)) child)
+  (if (eq (dom-attr box 'direction) 'column)
+      (pcase-let* ((y 0)
+                   ((seq head &rest rest) (edie-widget--children box)))
+        (while (and head (not (eq head child)))
+          (setq y (+ y (edie-widget-height head)))
+          (setq head (car rest)
+                rest (cdr rest)))
+        y)
+    ;; TODO This needs to change when we support vertical alignment, padding, etc
+    0))
 
 (cl-defmethod edie-widget-transform (node)
   (cond
@@ -265,7 +286,7 @@
   (+ (* (or (dom-attr text 'pad-x) 0) 2) (* (frame-char-width) (length (dom-text text)))))
 
 (cl-defmethod edie-widget-height ((text (head text)))
-  (edie-widget-height (edie-widget--parent text)))
+  (or (dom-attr text 'height) (edie-widget-height (edie-widget--parent text))))
 
 (cl-defmethod edie-widget-x ((text (head text)))
   (edie-widget-child-x (edie-widget--parent text) text))

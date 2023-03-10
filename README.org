@@ -2,21 +2,17 @@
 
 /An Emacs-based desktop environment./
 
-Current status:
-
-#+CAPTION: Current status
-#+ATTR: :width 640px
 [[./current.png]]
 
-Edie aspires to be give you, dear Emacs user, a set of utilities resembling what youwhat you would get if you used a full blown desktop environment like GNOME, KDE, Xfce, etc, while letting you control all of what it provides from the comfort of Emacs itself.
+Edie is a desktop environment written entirely in Emacs Lisp, designed to be lightweight, fast, and highly customizable. Unlike traditional desktop environments, Edie allows users to create their own tools and features using Emacs Lisp, providing complete control over their environment. If you're looking for an innovative and flexible desktop environment, Edie might be just what you need.
 
 ** Components
 The following components exist:
 
-*** [[https://github.com/dleal-mojotech/edie-wm][Edie WM]]
+*** Edie WM
 This is a wrapper around Openbox (or any other EWMH-compliant window manager, but I haven't tested that).
 
-*** [[https://github.com/dleal-mojotech/edie-bar][Edie Bar]]
+*** Edie Bar
 A panel/launcher combination.
 
 *** Edie Wallpaper

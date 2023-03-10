@@ -37,6 +37,7 @@
 (defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
+(defvar edie-wm-window-raise-function nil)
 
 (defvar edie-wm-window-close-functions nil)
 
@@ -64,7 +65,6 @@
 (defcustom edie-wm-desktop-padding-alist
   '((nil . (:left 0 :top 0 :bottom 0 :right 0)))
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
-  :type 'edie-wm-geometry)
   :type '(repeat (alist :key-type symbol :value-type edie-wm-geometry)))
 
 (defcustom edie-wm-window-margins 0
@@ -83,6 +83,10 @@
   "The color of inactive window borders."
   :type 'color)
 
+(defcustom edie-wm-monitor-focus-changed-hook nil
+  "Normal hook run after switching active monitors."
+  :type 'hook)
+
 (defcustom edie-wm-desktop-focus-changed-hook nil
   "Normal hook run after switching virtual desktops."
   :type 'hook)
@@ -97,6 +101,10 @@
 
 (defcustom edie-wm-window-updated-hook nil
   "Normal hook run after some significant window property changes."
+  :type 'hook)
+
+(defcustom edie-wm-window-rules-functions nil
+  "Functions run to determine window properties."
   :type 'hook)
 
 (defcustom edie-wm-window-closed-hook nil
@@ -139,7 +147,7 @@ will be applied to windows matched by FILTERS."
 
 (defcustom edie-wm-backend 'openbox
   nil
-  :type '(choice (const openbox)))
+  :type '(choice (const openbox) (const hyprland)))
 
 ;;;###autoload
 (define-minor-mode edie-wm-mode
@@ -155,7 +163,6 @@ will be applied to windows matched by FILTERS."
         (edie-wm-reset-window-list)
 
         (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function))
-
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile))
     (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile) ))
 
@@ -211,7 +218,14 @@ switch to."
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
-  (funcall edie-wm-focus-window-function (edie-wm-window-id window)))
+  (let* ((wid (edie-wm-window-id window))
+         (elt (assoc wid edie-wm--window-list)))
+    (setq edie-wm--window-list (delq elt edie-wm--window-list)
+          edie-wm--current-window-id wid)
+    (push elt edie-wm--window-list)
+
+    (funcall edie-wm-focus-window-function wid)
+    (run-hooks 'edie-wm-window-focus-changed-hook)))
 
 (defun edie-wm-select-window ()
   "Prompt for a window."
@@ -235,6 +249,11 @@ switch to."
   (interactive (list (edie-wm-select-desktop)))
   (when-let ((window (or window (edie-wm-current-window))))
     (edie-wm-update-window window (list :desktop desktop))))
+
+(defun edie-wm-window-to-monitor (monitor &optional window)
+  "Move WINDOW to MONITOR."
+  (let ((window (or window (edie-wm-current-window))))
+    (edie-wm-update-window window (list :monitor (edie-wm-monitor-id monitor)))))
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
@@ -406,31 +425,42 @@ Return nil or the list of windows that match the filters."
     (truncate size)))
 
 (defun edie-wm-on-window-focus (wid)
-  (if-let ((elt (assoc wid edie-wm--window-list)))
-      ;; move window to the top of the stack
-      (progn
-        (setq edie-wm--window-list (delq elt edie-wm--window-list))
-        (push elt edie-wm--window-list)
-        (setq edie-wm--current-window-id wid))
-    (setq edie-wm--current-window-id nil))
-
-  (run-hooks 'edie-wm-window-focus-changed-hook))
+  (when (not (equal wid edie-wm--current-window-id))
+    (let ((window (cdr (assoc wid edie-wm--window-list))))
+      (cond
+       (window
+        (edie-wm-focus-window window))
+       ((not window)
+        (edie-wm-focus-window (cdr (assoc wid edie-wm--window-list))))
+       ((not wid)
+        (setq edie-wm--current-window-id nil))))))
 
 (defun edie-wm-on-window-add (window)
   ;; TODO ensure that window still exists
   (setf (map-elt edie-wm--window-list (edie-wm-window-id window)) window)
 
-  (let ((edie-wm--current-window-id (edie-wm-window-id window)))
-    (run-hooks 'edie-wm-window-added-hook))
+  (let ((changes (edie-wm--apply-rules window)))
+    (setq edie-wm--current-window-id (edie-wm-window-id window))
+    (run-hooks 'edie-wm-window-added-hook)
 
-  (when-let ((changes (edie-wm--apply-rules window)))
-    (edie-wm-update-window window changes)))
+    (edie-wm-focus-window window)
+
+    (when changes
+      (edie-wm-update-window window changes))))
 
 (defun edie-wm-on-window-remove (wid)
-  (when-let ((window (cdr (assoc wid edie-wm--window-list))))
+  (when-let ((window (cdr (assoc wid edie-wm--window-list)))
+             (edie-wm--current-window-id wid)
+             (desktop-id (edie-wm-window-desktop window)))
     (run-hooks 'edie-wm-window-closed-hook)
 
-    (setq edie-wm--window-list (delete (assoc wid edie-wm--window-list) edie-wm--window-list))))
+    (setq edie-wm--window-list (delq (assoc wid edie-wm--window-list) edie-wm--window-list))
+
+    (catch 'found
+      (dolist (w (edie-wm-window-list))
+        (when (equal (edie-wm-window-desktop w) desktop-id)
+          (edie-wm-focus-window w)
+          (throw 'found w))))))
 
 (defun edie-wm-on-window-update (wid changes)
   (when-let ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
@@ -443,8 +473,11 @@ Return nil or the list of windows that match the filters."
       (edie-wm-update-window window more-changes))))
 
 (defun edie-wm-on-desktop-focus-change ()
-  (setf (edie-wm-monitor-desktop (edie-wm-current-monitor))
-        (funcall edie-wm-current-desktop-function))
+  (let ((desktop-id (funcall edie-wm-current-desktop-function)))
+    (setf (edie-wm-monitor-desktop (edie-wm-current-monitor)) desktop-id)
+    (if-let ((window (car (edie-wm-window-filter-list (list :desktop desktop-id)))))
+        (edie-wm-focus-window window)
+      (setq edie-wm--current-window-id nil)))
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
 (defun edie-wm--adjust-margins (plist)
@@ -482,12 +515,14 @@ Return nil or the list of windows that match the filters."
                    (edie-wm-window-filter-match-p filter window))
                  edie-wm-rules-alist)))
 
-(cl-defun edie-wm-tile-maybe-tile ((&key tile &allow-other-keys) _)
+(cl-defun edie-wm-tile-maybe-tile ((&key tile &allow-other-keys) window)
   "Tile WINDOW if it matches RULES."
   (let ((tiles (ensure-list tile))
         (desktop (edie-wm-current-desktop))
         tile)
     (cond
+     ((setq tile (edie-wm-tile-window-tile window))
+      (edie-wm-geometry (edie-wm-tile--spec tile)))
      ((setq tile (seq-find (lambda (tl) (null (edie-wm-tile-window-list desktop tl))) tiles))
       (edie-wm-geometry (edie-wm-tile--spec tile)))
      ((memq (setq tile (edie-wm-tile-current-tile)) tiles)
