@@ -41,8 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-current-window-id-function #'edie-wm-hypr--current-window-id
-        edie-wm-desktop-id-list-function #'edie-wm-hypr--desktop-id-list
+  (setq edie-wm-desktop-id-list-function #'edie-wm-hypr--desktop-id-list
         edie-wm-focus-window-function #'edie-wm-hypr--window-focus
         edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
         edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
@@ -53,8 +52,7 @@
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-current-window-id-function nil
-        edie-wm-focus-window-function nil
+  (setq edie-wm-focus-window-function nil
         edie-wm-set-desktop-function nil
         edie-wm-update-window-function nil
         edie-wm-window-list-function nil))
@@ -208,7 +206,7 @@ The following event types are supported (listed in order of priority):
     (when monitor
       (edie-wm-hypr--write 'movewindow monitor))))
 
-(defun edie-wm-hypr--current-window-id ()
+(defun edie-wm-backend-current-window-id ()
   (when-let ((wnd (edie-wm-hypr--current-window)))
     (edie-wm-window-id wnd)))
 

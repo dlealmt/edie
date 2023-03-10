@@ -33,7 +33,6 @@
 (defvar edie-wm-focus-window-function nil)
 (defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
-(defvar edie-wm-current-window-id-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
 (defvar edie-wm-window-raise-function nil)
@@ -161,7 +160,7 @@ will be applied to windows matched by FILTERS."
 
         (edie-wm-reset-window-list)
 
-        (setq edie-wm--current-window-id (funcall edie-wm-current-window-id-function))
+        (setq edie-wm--current-window-id (edie-wm-backend-current-window-id))
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile))
     (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile) ))
 
