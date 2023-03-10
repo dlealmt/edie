@@ -41,8 +41,7 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-monitor-list-function #'edie-wm-hypr--monitor-list
-        edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
+  (setq edie-wm-set-desktop-function #'edie-wm-hypr--wm-set-desktop
         edie-wm-update-window-function #'edie-wm-hypr--window-update
         edie-wm-window-list-function #'edie-wm-hypr--window-list))
 
@@ -233,7 +232,7 @@ The following event types are supported (listed in order of priority):
            (setf (edie-wm-window-desktop window) t))))
       window)))
 
-(defun edie-wm-hypr--monitor-list ()
+(defun edie-wm-backend-monitor-list ()
   (mapcar #'edie-wm-hypr--parse-monitor
           (split-string (edie-wm-hypr--read 'monitors) "\n\n" t "[[:space:]\n]+")))
 

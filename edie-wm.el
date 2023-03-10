@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-monitor-list-function nil)
 (defvar edie-wm-set-desktop-function nil)
 (defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
@@ -358,7 +357,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-monitor-list ()
    (or edie-wm--monitor-list
-       (setq edie-wm--monitor-list (funcall edie-wm-monitor-list-function))))
+       (setq edie-wm--monitor-list (edie-wm-backend-monitor-list))))
 
 (defun edie-wm-on-monitor-focus-change (name)
   (dolist (m (edie-wm-monitor-list))
