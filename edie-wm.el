@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'map))
 
-(defvar edie-wm-update-window-function nil)
 (defvar edie-wm-window-list-function nil)
 (defvar edie-wm-window-raise-function nil)
 
@@ -305,7 +304,7 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-update-window (window plist)
   ""
   (when-let ((changes (edie-wm-window-merge-changes window plist)))
-    (funcall edie-wm-update-window-function (edie-wm-window-id window) changes)))
+    (edie-wm-backend-window-update (edie-wm-window-id window) changes)))
 
 (defun edie-wm-window-merge-changes (window plist)
   (let ((changes nil))

@@ -41,15 +41,13 @@
                                    :filter #'edie-wm-hypr--conn-events-filter
                                    :family 'local))
 
-  (setq edie-wm-update-window-function #'edie-wm-hypr--window-update
-        edie-wm-window-list-function #'edie-wm-hypr--window-list))
+  (setq edie-wm-window-list-function #'edie-wm-hypr--window-list))
 
 (defun edie-wm-hyprland-stop ()
   (delete-process edie-wm-hypr--conn-events)
   (setq edie-wm-hypr--conn-events nil)
 
-  (setq edie-wm-update-window-function nil
-        edie-wm-window-list-function nil))
+  (setq edie-wm-window-list-function nil))
 
 (defun edie-wm-backend-current-desktop-id ()
   (let ((str (edie-wm-hypr--read 'monitors)))
@@ -180,9 +178,9 @@ The following event types are supported (listed in order of priority):
   (edie-wm-hypr--write 'bringactivetotop))
 
 (defun edie-wm-backend-window-focus (wid)
-  (edie-wm-hypr--window-update wid '(:focus t)))
+  (edie-wm-backend-window-update wid '(:focus t)))
 
-(defun edie-wm-hypr--window-update (wid props)
+(defun edie-wm-backend-window-update (wid props)
   (cl-assert (and wid props) t)
 
   (pcase-let (((map :left :top :width :height :focus :monitor) props))
