@@ -169,7 +169,7 @@ The following event types are supported (listed in order of priority):
          (edie-wm-on-monitor-remove mid))
         ((seq 'wnd-upd wid &rest changes)
          (edie-wm-on-window-update wid changes))))))
-
+
 (defun edie-wm-hypr--window-raise-active ()
   (edie-wm-hypr--write 'bringactivetotop))
 
@@ -223,32 +223,42 @@ The following event types are supported (listed in order of priority):
           ((rx bos "pinned: 1" eos)
            (setf (edie-wm-window-desktop window) t))))
       window)))
-
+
 (defun edie-wm-backend-monitor-list ()
   (mapcar #'edie-wm-hypr--parse-monitor
           (split-string (edie-wm-hypr--read 'monitors) "\n\n" t "[[:space:]\n]+")))
 
 (defun edie-wm-hypr--parse-monitor (string)
-  (let ((monitor (make-edie-wm-monitor)))
+  (let ((monitor nil))
     (dolist (line (split-string string "\n" t "[[:space:]]+"))
       (pcase line
         ((rx bos "Monitor "
              (let name (+ (not space)))
              " (ID " (let id (+ digit)) "):")
-         (setf (edie-wm-monitor-name monitor) name)
-         (setf (edie-wm-monitor-id monitor) id))
+         (edie-wm-set-properties monitor `((id . ,id) (name . ,name)))
         ((rx (let width (+ digit)) "x" (let height (+ digit))
              (+ (not space)) " at "
              (let x (+ digit)) "x" (let y (+ digit)))
-         (setf (edie-wm-monitor-left monitor) (string-to-number x))
-         (setf (edie-wm-monitor-top monitor) (string-to-number y))
-         (setf (edie-wm-monitor-width monitor) (string-to-number width))
-         (setf (edie-wm-monitor-height monitor) (string-to-number height)))
+         (edie-wm-set-properties
+          monitor `((left . ,(string-to-number x))
+                    (top . ,(string-to-number y))
+                    (width . ,(string-to-number width))
+                    (height . ,(string-to-number height)))))
         ((rx bos "focused: yes")
-         (setf (edie-wm-monitor-focused monitor) t))
+         (edie-wm-set-property monitor 'focused t))
         ((rx bos "active workspace: " (let ws (+ digit)))
-         (setf (edie-wm-monitor-desktop monitor) ws))))
+         (edie-wm-set-property monitor 'active-desktop-id ws))))
     monitor))
+
+(defun edie-wm-backend-desktop-list ()
+  (mapcar #'edie-wm-hypr--parse-desktop
+          (split-string (edie-wm-hypr--read 'workspaces) "\n\n" t "[[:space:]\n]+")))
+
+(defun edie-wm-hypr--parse-desktop (string)
+  (pcase (car (split-string string "\n" t "[[:space:]]+"))
+    ((rx bos "workspace ID " (let id (1+ digit)) " (" (not ")") ")"
+         " on monitor " (let monitor (1+ any)) ":" eos)
+     `((id . ,id) (monitor-name . ,monitor)))))
 
 (defun edie-wm-hypr--read (&rest args)
   (with-output-to-string

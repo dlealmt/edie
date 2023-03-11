@@ -73,6 +73,10 @@
   "The color of inactive window borders."
   :type 'color)
 
+(defcustom edie-wm-monitor-added-hook nil
+  "Normal hook run when a monitor is added."
+  :type 'hook)
+
 (defcustom edie-wm-monitor-focus-changed-hook nil
   "Normal hook run after switching active monitors."
   :type 'hook)
@@ -155,11 +159,24 @@ will be applied to windows matched by FILTERS."
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile))
     (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile) ))
 
+(defun edie-wm-set-properties (obj props)
+  "Set PROPS on OBJ."
+  (dolist (prop props obj)
+    (edie-wm-set-property obj (car prop) (cdr prop))))
+
+(defun edie-wm-set-property (obj property value)
+  "Replace the value of PROPERTY on OBJ with VALUE."
+  (setf (alist-get property obj) value)
+  obj)
+
+(defun edie-wm-property (obj property)
+  "Return the value of OBJ's PROPERTY."
+  (alist-get property obj))
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
-  (let ((dsk-id (edie-wm-monitor-desktop (edie-wm-current-monitor))))
-    (seq-find (lambda (d)
-                (string= (edie-wm-desktop-index d) dsk-id))
+  (let ((mon-id (edie-wm-property (edie-wm-current-monitor) 'id)))
+    (seq-find (lambda (dsk)
+                (string= (edie-wm-desktop-property dsk :monitor) mon-id))
               (edie-wm-desktop-list))))
 
 (defun edie-wm-switch-to-desktop (desktop)
@@ -242,7 +259,7 @@ switch to."
 (defun edie-wm-window-to-monitor (monitor &optional window)
   "Move WINDOW to MONITOR."
   (let ((window (or window (edie-wm-current-window))))
-    (edie-wm-update-window window (list :monitor (edie-wm-monitor-id monitor)))))
+    (edie-wm-update-window window (list :monitor (edie-wm-property monitor 'id)))))
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
@@ -340,9 +357,9 @@ Return nil or the list of windows that match the filters."
          (setq changes (plist-put changes :title val)))))
     changes))
 
-(cl-defstruct edie-wm-monitor id name left top width height focused desktop)
-
-(defalias 'edie-wm-monitor-focused-p 'edie-wm-monitor-focused)
+(defun edie-wm-monitor-focused-p (monitor)
+  "Return t if MONITOR is focused."
+  (edie-wm-property monitor 'focused))
 
 (defvar edie-wm--monitor-list nil)
 
@@ -350,18 +367,25 @@ Return nil or the list of windows that match the filters."
   (seq-find #'edie-wm-monitor-focused-p (edie-wm-monitor-list)))
 
 (defun edie-wm-monitor-list ()
-   (or edie-wm--monitor-list
-       (setq edie-wm--monitor-list (edie-wm-backend-monitor-list))))
+   (or edie-wm--monitor-list (edie-wm-monitor-reset-list)))
+
+(defun edie-wm-monitor-reset-list ()
+  "Reset the list of monitors."
+  (setq edie-wm--monitor-list (edie-wm-backend-monitor-list)))
+
+(defun edie-wm-on-monitor-add (_)
+  (edie-wm-monitor-reset-list)
+  (run-hook 'edie-wm-monitor-added-hook))
 
 (defun edie-wm-on-monitor-focus-change (name)
-  (dolist (m (edie-wm-monitor-list))
-    (setf (edie-wm-monitor-focused m) (string= (edie-wm-monitor-name m) name))))
+  (dolist (mon (edie-wm-monitor-list))
+    (edie-wm-set-property
+     mon 'focused (equal (edie-wm-property m 'name) name)))
+  (run-hook 'edie-wm-monitor-focus-changed-hook))
 
-(defun edie-wm-on-monitor-add (name)
-  (setq edie-wm--monitor-list nil))
-
-(defun edie-wm-on-monitor-remove (name)
-  (setq edie-wm--monitor-list nil))
+(defun edie-wm-on-monitor-remove (_)
+  (edie-wm-monitor-reset-list)
+  (run-hook 'edie-wm-monitor-removed-hook))
 
 (defun edie-wm-workarea ()
   (pcase-let* ((mon (edie-wm-current-monitor))
@@ -369,7 +393,7 @@ Return nil or the list of windows that match the filters."
                      (:top p-top)
                      (:right p-right)
                      (:bottom p-bot))
-                (cdr (or (assoc (edie-wm-monitor-name mon) edie-wm-desktop-padding)
+                (cdr (or (assoc (edie-wm-property mon 'name) edie-wm-desktop-padding)
                          (assoc nil edie-wm-desktop-padding))))
                ((map :left :top :width :height) (edie-wm-screenarea)))
     `(:left ,(+ left p-left)
@@ -378,7 +402,7 @@ Return nil or the list of windows that match the filters."
       :height ,(- height p-top p-bot))))
 
 (defun edie-wm-screenarea ()
-  (pcase-let (((cl-struct edie-wm-monitor left top width height) (edie-wm-current-monitor)))
+  (pcase-let (((map left top width height) (edie-wm-current-monitor)))
     `(:left ,left :top ,top :width ,width :height ,height)))
 
 (defun edie-wm-geometry (plist)
