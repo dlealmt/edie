@@ -27,6 +27,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
+
 (require 'map)
 (require 'pcase)
 
@@ -35,48 +38,107 @@
   :group 'edie)
 
 (defcustom edie-debug nil
-  "Whether to enable contract checks."
-  :type 'boolean)
+  "If non-nil, enable debugging features."
+  :type 'boolean
+  :group 'edie-debug)
 
-(defcustom edie-debug-xephyr-arguments '("-br" "-ac" "-noreset")
-  "Arguments to be passed to Xephyr."
-  :type '(repeat string))
+(defconst edie-debug-declare-form '(edie-log edie-debug--log-setup)
+  "Form to be used in `declare' to enable edie debugging.")
 
-(defcustom edie-debug-xephyr-window-size '(1600 . 1200)
-  "Size of the Xephyr window, in pixels."
-  :type '(cons natnum natnum))
+(defvar edie-debug--log-buffer-marker nil)
+(defvar edie-debug--log-depth nil)
+(defvar edie-debug--log-inhibit nil)
 
-(defcustom edie-debug-xephyr-display-number 1
-  "The display Xephyr will use when launched."
-  :type 'natnum)
-
-(defun edie-debug-try-config ()
+(defun edie-debug-clear-buffer ()
+  "Clear the log buffer."
   (interactive)
-  (edie-debug-start-xephyr)
-  (sleep-for 1)
-  (edie-debug-start-emacs))
+  (with-current-buffer (edie-debug--log-buffer)
+    (let ((inhibit-read-only t))
+      (erase-buffer))))
 
-(defun edie-debug-start-xephyr ()
+(defun edie-debug-state ()
   (interactive)
-  (apply #'start-process "edie-debug-xephyr" "*edie-debug*"
-         "Xephyr" (append edie-debug-xephyr-arguments
-                          (list "-screen"
-                                (format "%dx%d"
-                                        (car edie-debug-xephyr-window-size)
-                                        (cdr edie-debug-xephyr-window-size))
-                                (format ":%d" edie-debug-xephyr-display-number)))))
+  (pp-display-expression
+   `((current-monitor . ,(edie-wm-current-monitor))
+     (current-desktop . ,(edie-wm-current-desktop))
+     (current-window . ,(edie-wm-current-window))
+     (monitors . ,(edie-wm-monitor-list))
+     (desktops . ,(edie-wm-desktop-list))
+     (windows . ,(edie-wm-window-list)))
+   "*edie-state*"
+   t))
 
-(defun edie-debug-start-emacs ()
-  (interactive)
-  (with-environment-variables (("DISPLAY" (format ":%d" edie-debug-xephyr-display-number)))
-    (start-process "edie-debug-emacs" "*edie-debug*" "emacs" "--debug-init")))
+
+(defun edie-debug--log-buffer ()
+  (if-let ((buffer (get-buffer "*edie-debug*")))
+      buffer
+    (with-current-buffer (get-buffer-create "*edie-debug*")
+      (lisp-data-mode)
+      (read-only-mode +1)
+      (current-buffer))))
+
+(defun edie-debug--log-buffer-marker ()
+  (with-current-buffer (edie-debug--log-buffer)
+    (let ((marker edie-debug--log-buffer-marker) )
+      (when (or (not (markerp marker))
+                (not (eq (current-buffer) (marker-buffer marker))))
+        (setq marker (point-min-marker)
+              edie-debug--log-buffer-marker marker)
+        (set-marker-insertion-type marker t))
+      marker)))
+
+(defun edie-debug--log (fname arglist fn args)
+  (let* ((marker (edie-debug--log-buffer-marker))
+         (time (format-time-string "\"[%H:%M:%S:%3N]\""))
+         (edie-debug--log-depth (or (and edie-debug--log-depth (1+ edie-debug--log-depth)) 0))
+         (lst (if-let ((lst (seq-mapn #'list arglist args)))
+                  lst
+                (list "()")))
+         result)
+    (with-current-buffer (edie-debug--log-buffer)
+      (goto-char marker)
+
+      (let ((inhibit-read-only t))
+        (unwind-protect
+            (progn
+              (insert
+               (format "%s%s"
+                       (make-string (* 2 edie-debug--log-depth) ?\ )
+                       (append (list fname time) lst)))
+              (newline)
+              (setq result (apply fn args)))
+          (insert (format "%s%s"
+                          (make-string (* 2 edie-debug--log-depth) ?\ )
+                          (append (list fname time) lst (list '=> result))))
+          (set-marker marker (point))
+          (newline))))
+    result))
+
+(defun edie-debug--log-function (enabled fname arglist fn args)
+  (cond
+   ((and edie-debug (not enabled) (not edie-debug--log-inhibit))
+      (let ((edie-debug--log-inhibit t))
+        (apply fn args)))
+   ((and edie-debug edie-debug--log-inhibit)
+    (edie-debug--log fname arglist fn args))
+   (t
+    (apply fn args))))
+
+(defun edie-debug--log-setup (f arglist enable)
+  (let ((sym (intern (format "edie-debug--log--instance--%s" f))))
+    `(progn
+       (defalias ',sym
+         #'(lambda (fn &rest args)
+             (edie-debug--log-function ,enable ',f ',arglist fn args)))
+
+       ,(list 'advice-add (list 'quote f) :around (list 'quote sym)))))
 
 (defmacro edie-match (expr expval)
   "Checke if EXPR match the `pcase' pattern EXPVAL."
   (if edie-debug
-    `(pcase ,expr
-       (,expval ,expr)
-       (_ (signal 'assertion-failed (list ',expr ,expr ',expval))))
+      `(pcase ,expr
+         (,expval ,expr)
+         (_ (signal 'assertion-failed (list ',expr ,expr ',expval))))
     expr))
 
 (defmacro edie-check (&rest body)
@@ -101,52 +163,7 @@
              ,retval))
       `(progn ,@body))))
 
-(defun edie-debug (&rest objs)
-  (with-current-buffer (get-buffer-create "*edie-debug*")
-    (insert (format "%S\n" objs))
-    (goto-char (point-max))))
-
-(defun edie-debug--log (fun-name fun args)
-  ""
-  (let ((buffer (get-buffer-create "*edie-debug*"))
-        (i 0)
-        retval)
-    (with-current-buffer buffer
-      (edie-debug--tagged-log fun-name "Called:")
-      (dolist (arg args)
-        (insert (format "  - (arg %d) %S\n" i arg))
-        (setq i (1+ i))
-        (goto-char (point-max)))
-      (setq retval (apply fun args))
-      (insert (format "[%s] Exited:\n" fun-name))
-      (goto-char (point-max))
-      (insert (format "  - %S\n" retval))
-      (goto-char (point-max)))
-    retval))
-
-(defun edie-debug--tagged-log (fun str)
-  ""
-  (edie-debug--log-line "[%s] %s" fun str))
-
-(defun edie-debug--log-line (str &rest args)
-  ""
-  (insert (apply #'format (concat str "\n") args))
-  (goto-char (point-max)))
-
-(defmacro edie-debug-instrument (&rest funs)
-  ""
-  (let ((advices nil)
-        (closure (make-symbol "closure"))
-        (args (make-symbol "args")))
-    `(progn
-       ,@(dolist (fun funs advices)
-           (let ((advice-name (intern (format "%s--with-logging" fun))))
-             (push `(advice-add ',fun :around ',advice-name) advices)
-             (push
-              `(defalias ',advice-name
-                 (lambda (,closure &rest ,args)
-                   (edie-debug--log ',fun ,closure ,args)))
-              advices))))))
+(cl-pushnew edie-debug-declare-form defun-declarations-alist)
 
 (provide 'edie-debug)
 ;;; edie-debug.el ends here

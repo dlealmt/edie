@@ -33,6 +33,7 @@
 
 (cl-defmethod edie-widget-render (((&whole clock _ attributes &rest) (head clock)))
   ""
+  (declare (edie-log nil))
   (edie-widget-add-update-hook 'edie-bar-tick-hook)
 
   (pcase-let (((map format icon) attributes))

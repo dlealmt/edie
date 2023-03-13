@@ -31,6 +31,8 @@
 (eval-when-compile
   (require 'cl-lib))
 
+(require 'edie-wm)
+
 (defcustom edie-run-proxy-frame-name "_edie-run_"
   nil
   :type 'string)
@@ -99,6 +101,7 @@
 
 (defun edie-run-once (filters command &rest command-args)
   ""
+  (declare (edie-log t))
   (cl-pushnew filters edie-run-filter-list :test #'equal)
 
   (if-let ((window (edie-wm-window filters)))

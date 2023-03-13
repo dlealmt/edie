@@ -57,6 +57,7 @@
     (nreverse ids)))
 
 (defun edie-wm-backend-window-list ()
+  (declare (edie-log t))
   (mapcar #'edie-wm-hypr--parse-window
           (split-string (edie-wm-hypr--read 'clients) "\n\n" t "[[:space:]\n]+")))
 
@@ -116,12 +117,13 @@ The following event types are supported (listed in order of priority):
        (when (equal wid (edie-wm-window-id window))
          (edie-wm-hypr--insert-event
           (list 'wnd-upd wid
-                :class (edie-wm-window-class window)
-                :title (edie-wm-window-title window)
-                :left (edie-wm-window-left window)
-                :top (edie-wm-window-top window)
-                :width (edie-wm-window-width window)
-                :height (edie-wm-window-height window)))
+                `(class . ,(edie-wm-window-class window))
+                `(desktop . ,(edie-wm-window-desktop window))
+                `(title . ,(edie-wm-window-title window))
+                `(left . ,(edie-wm-window-left window))
+                `(top . ,(edie-wm-window-top window))
+                `(width . ,(edie-wm-window-width window))
+                `(height . ,(edie-wm-window-height window))))
          (edie-wm-hypr--insert-event (cons 'wnd-focus wid)))))
     ((rx "activewindowv2>>,")
      (edie-wm-hypr--insert-event (cons 'wnd-focus nil)))
@@ -138,8 +140,7 @@ The following event types are supported (listed in order of priority):
     ((rx "closewindow>>" (let wid (+ hex)))
      (edie-wm-hypr--insert-event (cons 'wnd-rm wid)))
     ((rx "focusedmon>>" (let mon (+ (not ","))) "," (let did (+ any)))
-     (edie-wm-hypr--insert-event (cons 'mon-focus mon))
-     (edie-wm-hypr--insert-event (cons 'dsk-focus did)))
+     (edie-wm-hypr--insert-event (cons 'mon-focus mon)))
     ((rx "workspace>>" (let did (+ digit)))
      (edie-wm-hypr--insert-event (cons 'dsk-focus did)))
     ((rx "monitoradded>>" (let name (+ any)))
@@ -159,8 +160,8 @@ The following event types are supported (listed in order of priority):
          (edie-wm-on-window-focus wid))
         (`(mon-focus . ,mon)
          (edie-wm-on-monitor-focus-change mon))
-        (`(dsk-focus . ,_)
-         (edie-wm-on-desktop-focus-change))
+        (`(dsk-focus . ,desktop-id)
+         (edie-wm-on-desktop-focus-change desktop-id))
         (`(wnd-rm . ,wid)
          (edie-wm-on-window-remove wid))
         (`(mon-add . ,mid)
@@ -171,15 +172,18 @@ The following event types are supported (listed in order of priority):
          (edie-wm-on-window-update wid changes))))))
 
 (defun edie-wm-hypr--window-raise-active ()
+  (declare (edie-log t))
   (edie-wm-hypr--write 'bringactivetotop))
 
 (defun edie-wm-backend-window-focus (wid)
-  (edie-wm-backend-window-update wid '(:focus t)))
+  (declare (edie-log t))
+  (edie-wm-backend-window-update wid '((focus . t))))
 
 (defun edie-wm-backend-window-update (wid props)
+  (declare (edie-log t))
   (cl-assert (and wid props) t)
 
-  (pcase-let (((map :left :top :width :height :focus :monitor) props))
+  (pcase-let (((map left top width height focus monitor) props))
     (when (and left top)
       (cl-assert (and (numberp left) (numberp top)) t)
       (edie-wm-hypr--write 'moveactive 'exact left top))
@@ -225,17 +229,21 @@ The following event types are supported (listed in order of priority):
       window)))
 
 (defun edie-wm-backend-monitor-list ()
-  (mapcar #'edie-wm-hypr--parse-monitor
-          (split-string (edie-wm-hypr--read 'monitors) "\n\n" t "[[:space:]\n]+")))
+  (declare (edie-log t))
+  (let* ((strings (split-string (edie-wm-hypr--read 'monitors)
+                                "\n\n" t "[[:space:]\n]+"))
+         (monitors nil))
+    (dolist (str strings (nreverse monitors))
+      (push (edie-wm-hypr--parse-monitor str) monitors))))
 
 (defun edie-wm-hypr--parse-monitor (string)
-  (let ((monitor nil))
+  (let ((monitor (edie-wm-monitor-make)))
     (dolist (line (split-string string "\n" t "[[:space:]]+"))
       (pcase line
         ((rx bos "Monitor "
              (let name (+ (not space)))
              " (ID " (let id (+ digit)) "):")
-         (edie-wm-set-properties monitor `((id . ,id) (name . ,name)))
+         (edie-wm-set-properties monitor `((id . ,id) (name . ,name))))
         ((rx (let width (+ digit)) "x" (let height (+ digit))
              (+ (not space)) " at "
              (let x (+ digit)) "x" (let y (+ digit)))
@@ -244,15 +252,23 @@ The following event types are supported (listed in order of priority):
                     (top . ,(string-to-number y))
                     (width . ,(string-to-number width))
                     (height . ,(string-to-number height)))))
+        ((rx bos "active workspace: " (let focused-desktop (+ digit)))
+         (edie-wm-set-property monitor 'focused-desktop focused-desktop))
         ((rx bos "focused: yes")
-         (edie-wm-set-property monitor 'focused t))
-        ((rx bos "active workspace: " (let ws (+ digit)))
-         (edie-wm-set-property monitor 'active-desktop-id ws))))
+         (edie-wm-set-property monitor 'focused t))))
     monitor))
 
+(defun edie-wm-backend-desktop-focus (desktop)
+  (edie-wm-hypr--write 'workspace (edie-wm-property desktop 'id)))
+
 (defun edie-wm-backend-desktop-list ()
-  (mapcar #'edie-wm-hypr--parse-desktop
-          (split-string (edie-wm-hypr--read 'workspaces) "\n\n" t "[[:space:]\n]+")))
+  (let ((desktops (edie-wm-default-desktop-list))
+        results)
+    (dotimes (i (length desktops))
+      (let ((dsk (nth i desktops)))
+        (edie-wm-set-property dsk 'id (number-to-string (1+ i)))
+        (push dsk results)))
+    (nreverse results)))
 
 (defun edie-wm-hypr--parse-desktop (string)
   (pcase (car (split-string string "\n" t "[[:space:]]+"))

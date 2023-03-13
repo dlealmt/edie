@@ -46,9 +46,11 @@
 
 (cl-defmethod edie-widget-render ((widget (head desktop-list)))
   ""
+  (declare (edie-log nil))
+
   (edie-widget-add-update-hook 'edie-wm-desktop-focus-changed-hook)
 
-  (let ((desktop-index (edie-wm-desktop-index (edie-wm-current-desktop)))
+  (let ((desktop-id (edie-wm-property (edie-wm-current-desktop) 'id))
         used-desktops)
     (dolist (w (edie-wm-window-list))
       (cl-pushnew (edie-wm-window-desktop w) used-desktops))
@@ -58,9 +60,9 @@
                       `(icon ((name . ,(dom-attr widget 'icon))
                               (size . ,(dom-attr widget 'icon-size))
                               (color . ,(cond
-                                         ((string= desktop-index (edie-wm-desktop-index d))
+                                         ((equal desktop-id (edie-wm-property d 'id))
                                           edie-bar-desktop-list-icon-color-active)
-                                         ((member (edie-wm-desktop-index d) used-desktops)
+                                         ((member (edie-wm-property d 'id) used-desktops)
                                           edie-bar-desktop-list-icon-color-used))))))
                       (edie-wm-desktop-list)))))
 

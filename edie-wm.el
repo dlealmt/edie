@@ -27,6 +27,7 @@
 ;;; Code:
 
 (eval-when-compile
+  (require 'subr-x)
   (require 'map))
 
 (defvar edie-wm-window-close-functions nil)
@@ -45,17 +46,13 @@
 
 (define-widget 'edie-wm-geometry 'lazy
   "A property list describing the size and position of a rectangle."
-  :type '(plist :keyword-type (choice (const :left) (const :top) (const :width) (const :right))
+  :type '(alist :keyword-type (choice (const left) (const top) (const width) (const right))
                 :value-type edie-wm-unit))
 
-(defcustom edie-wm-default-desktop-list '("default")
-  "A list of desktop names."
-  :type '(repeat string))
-
-(defcustom edie-wm-desktop-padding-alist
-  '((nil . (:left 0 :top 0 :bottom 0 :right 0)))
+(defcustom edie-wm-monitor-padding-alist
+  '((nil . ((left . 0) (top . 0) (bottom . 0) (right . 0))))
   "The amount of whitespace, in pixels, reserved at each edge of the desktop."
-  :type '(repeat (alist :key-type symbol :value-type edie-wm-geometry)))
+  :type '(repeat (alist :key-type symbol :value-type sexp)))
 
 (defcustom edie-wm-window-margins 0
   "The amount of whitespace, in pixels, surrounding each window."
@@ -110,34 +107,14 @@
 
 A rule is a cons cell of the form (FILTERS . ATTRIBUTES).
 
-FILTERS is a plist, where each keyword corresponds to a window
+FILTERS is an alist, where each keyword corresponds to a window
 attribute which will be used to match against windows.
 
-ATTRIBUTES is a plist, where each keyword is an attribute that
+ATTRIBUTES is an alist, where each keyword is an attribute that
 will be applied to windows matched by FILTERS."
   :type '(choice (const nil)
-                 (alist :key-type (plist :key-type symbol :value-type sexp)
-                        :value-type (plist :key-type symbol :value-type sexp))))
-
-(defcustom edie-wm-tile-alist nil
-  "Alist of tiles."
-  :type '(choice (const nil) (alist :key-type symbol :value-type sexp)))
-
-(defcustom edie-wm-tile-commands nil
-  "Tile commands to be auto-generated."
-  :type '(list (set (const fit) (const focus) (const focus-cycle))
-               (repeat symbol)
-               (plist))
-  :set (pcase-lambda (var (and val `(,actions ,tiles ,(map :prefix))))
-         (custom-set-default var val)
-         (dolist (a actions)
-           (dolist (tile tiles)
-             (let ((command (intern (format "%s%s-%s" (or prefix "") a tile)))
-                   (action (intern (format "edie-wm-tile-%s" a))))
-               (defalias command
-                 (lambda ()
-                   (interactive)
-                   (funcall action tile))))))))
+                 (alist :key-type (alist :key-type symbol :value-type sexp)
+                        :value-type (alist :key-type symbol :value-type sexp))))
 
 (defcustom edie-wm-backend 'openbox
   nil
@@ -148,16 +125,15 @@ will be applied to windows matched by FILTERS."
   nil
   :global t
   (if edie-wm-mode
-      (let ((backend (intern (format "edie-wm-%s" edie-wm-backend))))
-        (require backend)
+      (progn
+        (require (intern (format "edie-wm-%s" edie-wm-backend)))
 
         (edie-wm-backend-start)
 
-        (edie-wm-reset-window-list)
-
-        (setq edie-wm--current-window-id (edie-wm-backend-current-window-id))
-        (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile))
-    (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile) ))
+        (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)
+        (edie-wm-reset-window-list))
+    (edie-wm-backend-stop)
+    (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)))
 
 (defun edie-wm-set-properties (obj props)
   "Set PROPS on OBJ."
@@ -166,53 +142,127 @@ will be applied to windows matched by FILTERS."
 
 (defun edie-wm-set-property (obj property value)
   "Replace the value of PROPERTY on OBJ with VALUE."
-  (setf (alist-get property obj) value)
+  (let ((obj-props (cdr obj)))
+    (setf (alist-get property obj-props) value)
+    (setcdr obj obj-props))
   obj)
 
 (defun edie-wm-property (obj property)
   "Return the value of OBJ's PROPERTY."
-  (alist-get property obj))
+  (cdr (assq property (cdr obj))))
+
+(defun edie-wm-properties (obj &optional properties)
+  "Return the values of OBJ's PROPERTIES."
+  (if properties
+      (let ((props nil))
+        (dolist (prop properties (nreverse props))
+          (push (cons prop (edie-wm-property obj prop)) props)))
+    (cdr obj)))
+
+(defun edie-wm-desktop--gen-commands (names)
+  (dolist (name names)
+    (defalias (intern (format "edie-wm-switch-to-desktop-%s" name))
+      (lambda ()
+        (interactive)
+        (edie-wm-switch-to-desktop (edie-wm-desktop `((name . ,name))))))
+    (defalias (intern (format "edie-wm-window-to-desktop-%s" name))
+      (lambda ()
+        (interactive)
+        (edie-wm-window-to-desktop (edie-wm-desktop `((name . ,name))))))))
+
+(defcustom edie-wm-default-desktop-list '(default)
+  "A list of desktop names."
+  :type '(repeat symbol)
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (edie-wm-desktop--gen-commands value)))
+
+(defvar edie-wm--desktop-list nil)
+
+(defun edie-wm-desktop-make ()
+  "Create a new desktop."
+  '(desktop))
+
+(defun edie-wm-desktop (filters)
+  "Return the desktop named NAME."
+  (declare (edie-log t))
+  (catch 'found
+    (dolist (dsk (edie-wm-desktop-list))
+      (or (catch 'not-found
+            (pcase-dolist (`(,key . ,value) filters)
+              (or (eq (edie-wm-property dsk key) value)
+                  (throw 'not-found t))))
+          (throw 'found dsk)))))
+
+(defun edie-wm-desktop-focused-p (desktop monitor)
+  "Return t if DESKTOP is focused on MONITOR."
+  (eq (edie-wm-property desktop 'monitor)
+      (edie-wm-property monitor 'id)))
+
+(defvar edie-wm--current-desktop nil)
+
 (defun edie-wm-current-desktop ()
   "The desktop we are currently working in."
-  (let ((mon-id (edie-wm-property (edie-wm-current-monitor) 'id)))
-    (seq-find (lambda (dsk)
-                (string= (edie-wm-desktop-property dsk :monitor) mon-id))
-              (edie-wm-desktop-list))))
+  (declare (edie-log t))
+  (or edie-wm--current-desktop
+      (catch 'found
+        (let ((mon (edie-wm-current-monitor)))
+          (dolist (desktop (edie-wm-desktop-list))
+            (when (equal (edie-wm-property desktop 'id)
+                         (edie-wm-property mon 'focused-desktop))
+              (throw 'found desktop)))))))
+
+(defun edie-wm-desktop-change-focused (desktop monitor)
+  "Set DESKTOP as focused on MONITOR."
+  (let* ((mon-id (edie-wm-property monitor 'id))
+         (focused (edie-wm-desktop `((focused . ,mon-id)))))
+    (when focused
+      (edie-wm-set-property focused 'focused nil))
+    (edie-wm-set-property desktop 'focused mon-id)))
 
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
 
 When called interactively, prompt for the desktop we want to
 switch to."
+  (declare (edie-log t))
   (interactive (list (edie-wm-select-desktop)))
-  (edie-wm-backend-desktop-focus desktop))
 
-(defun edie-wm-desktop-list (&optional reload)
+  (edie-wm-desktop-change-focused desktop (edie-wm-current-monitor))
+
+  (edie-wm-backend-desktop-focus desktop)
+
+  (let ((edie-wm--current-desktop desktop))
+    (run-hooks 'edie-wm-desktop-focus-changed-hook)))
+
+(defun edie-wm-default-desktop-list ()
+  "Return the default desktop list."
+  (mapcar (lambda (name)
+            `(desktop . ((name . ,name))))
+          edie-wm-default-desktop-list))
+
+(defun edie-wm-reset-desktop-list ()
+  "Reset the desktop list."
+  (interactive)
+  (setq edie-wm--desktop-list (edie-wm-backend-desktop-list)))
+
+(defun edie-wm-desktop-list ()
   "The list of virtual desktops."
-  (cl-mapcar (lambda (name id)
-               (list 'desktop (list :name name) id))
-             edie-wm-default-desktop-list
-             (edie-wm-backend-desktop-id-list)))
+  (declare (edie-log t))
+  (or edie-wm--desktop-list
+      (setq edie-wm--desktop-list (edie-wm-backend-desktop-list)))
+  (edie-wm-backend-desktop-list))
 
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
   (pcase-let* ((desktop (edie-wm-current-desktop))
                (desktops (thread-last
                            (edie-wm-desktop-list)
-                           (seq-remove (lambda (d) (equal d desktop)))
-                           (seq-map (pcase-lambda ((and d `(desktop ,(map :name) ,id)))
-                                      (cons name d)))))
-               (choice (completing-read "Desktop: " desktops nil 'confirm))
-               ((seq 'desktop _ desktop-id) (map-elt desktops choice)))
-    desktop-id))
-
-(defun edie-wm-desktop-index (desktop)
-  "Return the index of DESKTOP."
-  (nth 2 desktop))
-
-(defun edie-wm-desktop-make (name id)
-  "Make a desktop instance."
-  `(desktop (:name ,name) ,id))
+                           (seq-remove (lambda (dsk) (eq dsk desktop)))
+                           (mapcar (lambda (dsk)
+                                     (cons (edie-wm-property dsk 'name) dsk)))))
+               (choice (completing-read "Desktop: " desktops)))
+    (cdr (assq (intern choice) desktops))))
 
 (cl-defstruct edie-wm-window
   id
@@ -224,13 +274,16 @@ switch to."
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
+  (declare (edie-log t))
   (let* ((wid (edie-wm-window-id window))
          (elt (assoc wid edie-wm--window-list)))
     (setq edie-wm--window-list (delq elt edie-wm--window-list)
           edie-wm--current-window-id wid)
-    (push elt edie-wm--window-list)
+    (setf (alist-get wid edie-wm--window-list) window)
+    (setq edie-wm--current-window-id wid)
 
     (edie-wm-backend-window-focus wid)
+
     (run-hooks 'edie-wm-window-focus-changed-hook)))
 
 (defun edie-wm-select-window ()
@@ -246,29 +299,36 @@ switch to."
 
 (defun edie-wm-window-close (&optional window)
   "Close the active window or WINDOW."
+  (declare (edie-log t))
   (interactive)
+
   (when-let ((window (or window (edie-wm-current-window))))
     (run-hook-with-args-until-success 'edie-wm-window-close-functions window)))
 
 (defun edie-wm-window-to-desktop (desktop &optional window)
   "Send WINDOW to DESKTOP."
+  (declare (edie-log t))
   (interactive (list (edie-wm-select-desktop)))
   (when-let ((window (or window (edie-wm-current-window))))
-    (edie-wm-update-window window (list :desktop desktop))))
+    (edie-wm-update-window window `((desktop . ,(edie-wm-property desktop 'id))))))
 
 (defun edie-wm-window-to-monitor (monitor &optional window)
   "Move WINDOW to MONITOR."
+  (declare (edie-log t))
   (let ((window (or window (edie-wm-current-window))))
-    (edie-wm-update-window window (list :monitor (edie-wm-property monitor 'id)))))
+    (edie-wm-update-window window `((monitor . (edie-wm-property monitor 'id))))))
 
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
-  (when edie-wm--current-window-id
-    (cdr (assoc edie-wm--current-window-id edie-wm--window-list))))
+  (declare (edie-log t))
+  (edie-wm-window `((id . ,edie-wm--current-window-id))))
 
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
-  (seq-find (lambda (wnd) (edie-wm-window-filter-match-p filters wnd)) (edie-wm-window-list)))
+  (declare (edie-log t))
+  (seq-find (lambda (wnd)
+              (edie-wm-window-filter-match-p filters wnd))
+            (edie-wm-window-list)))
 
 (defun edie-wm-window-alist ()
   "An alist of windows where the keys are the window ids."
@@ -276,15 +336,16 @@ switch to."
 
 (defun edie-wm-reset-window-list ()
   "Reload the window list."
+  (declare (edie-log nil))
   (interactive)
   (let ((windows nil))
     (dolist (w (edie-wm-backend-window-list))
-      (edie-wm-update-window w (edie-wm--apply-rules w))
       (push (cons (edie-wm-window-id w) w) windows))
-    (setq edie-wm--window-list windows)))
+    (setq edie-wm--window-list (nreverse windows))))
 
 (defun edie-wm-window-list ()
   "The list of windows across all desktops."
+  (declare (edie-log t))
   (map-values (edie-wm-window-alist)))
 
 (defun edie-wm-window-filter-list (filters &optional windows)
@@ -296,13 +357,15 @@ For a description of supported filters and their format, see
 `edie-wm-window-filter-match-p'.
 
 Return nil or the list of windows that match the filters."
+  (declare (edie-log t))
   (seq-filter (lambda (window)
                 (edie-wm-window-filter-match-p filters window))
               (or windows (edie-wm-window-list))))
 
 (defun edie-wm-window-filter-match-p (filters &optional window)
   "Check whether WINDOW matches the given FILTERS."
-  (pcase-let (((map :class :desktop :height :instance :left :title :top :width) filters)
+  (declare (edie-log t))
+  (pcase-let (((map class desktop height instance left title top width) filters)
               (window (or window (edie-wm-current-window))))
     (and window
          (or (not class) (string-match-p class (edie-wm-window-class window)))
@@ -314,115 +377,136 @@ Return nil or the list of windows that match the filters."
          (or (not top) (equal top (edie-wm-window-top window)))
          (or (not width) (equal width (edie-wm-window-width window))))))
 
-(defun edie-wm-update-window (window plist)
+(defun edie-wm-update-window (window alist)
   ""
-  (when-let ((changes (edie-wm-window-merge-changes window plist)))
+  (declare (edie-log t))
+  (when-let ((changes (edie-wm-window-merge-changes window alist)))
     (edie-wm-backend-window-update (edie-wm-window-id window) changes)))
 
-(defun edie-wm-window-merge-changes (window plist)
+(defun edie-wm-window-merge-changes (window alist)
+  (declare (edie-log t))
   (let ((changes nil))
-    (while (keywordp (car plist))
-      (pcase (cons (pop plist) (pop plist))
-        ((and `(:left . ,val) (guard (not (equal val (edie-wm-window-left window)))))
+    (dolist (elt alist)
+      (pcase elt
+        ((and `(left . ,val) (guard (not (equal val (edie-wm-window-left window)))))
          (setf (edie-wm-window-left window) val)
-         (setq changes (plist-put changes :left val))
-         (unless (plist-get changes :top)
-           (setq changes (plist-put changes :top (edie-wm-window-top window)))))
-        ((and `(:top . ,val) (guard (not (equal val (edie-wm-window-top window)))))
+         (setf (alist-get (car elt) changes) val)
+         (unless (alist-get 'top changes)
+           (setf (alist-get 'top changes) (edie-wm-window-top window))))
+        ((and `(top . ,val) (guard (not (equal val (edie-wm-window-top window)))))
          (setf (edie-wm-window-top window) val)
-         (setq changes (plist-put changes :top val))
-         (unless (plist-get changes :left)
-           (setq changes (plist-put changes :left (edie-wm-window-left window)))))
-        ((and `(:width . ,val) (guard (not (equal val (edie-wm-window-width window)))))
+         (setf (alist-get (car elt) changes) val)
+         (unless (alist-get 'left changes)
+           (setf (alist-get 'left changes) (edie-wm-window-left window))))
+        ((and `(width . ,val) (guard (not (equal val (edie-wm-window-width window)))))
          (setf (edie-wm-window-width window) val)
-         (setq changes (plist-put changes :width val))
-         (unless (plist-get changes :height)
-           (setq changes (plist-put changes :height (edie-wm-window-height window)))))
-        ((and `(:height . ,val) (guard (not (equal val (edie-wm-window-height window)))))
+         (setf (alist-get (car elt) changes) val)
+         (unless (alist-get 'height changes)
+           (setf (alist-get 'height changes) (edie-wm-window-height window))))
+        ((and `(height . ,val) (guard (not (equal val (edie-wm-window-height window)))))
          (setf (edie-wm-window-height window) val)
-         (setq changes (plist-put changes :height val))
-         (unless (plist-get changes :width)
-           (setq changes (plist-put changes :width (edie-wm-window-width window)))))
-        ((and `(:class . ,val) (guard (not (equal val (edie-wm-window-class window)))))
+         (setf (alist-get (car elt) changes) val)
+         (unless (alist-get 'width changes)
+           (setf (alist-get 'width changes) (edie-wm-window-width window))))
+        ((and `(class . ,val) (guard (not (equal val (edie-wm-window-class window)))))
          (setf (edie-wm-window-class window) val)
-         (setq changes (plist-put changes :class val)))
-        ((and `(:instance . ,val) (guard (not (equal val (edie-wm-window-instance window)))))
+         (setf (alist-get (car elt) changes) val))
+        ((and `(instance . ,val) (guard (not (equal val (edie-wm-window-instance window)))))
          (setf (edie-wm-window-instance window) val)
-         (setq changes (plist-put changes :instance val)))
-        ((and `(:desktop . ,val) (guard (not (equal val (edie-wm-window-desktop window)))))
+         (setf (alist-get (car elt) changes) val))
+        ((and `(desktop . ,val) (guard (not (equal val (edie-wm-window-desktop window)))))
          (setf (edie-wm-window-desktop window) val)
-         (setq changes (plist-put changes :desktop val)))
-        ((and `(:title . ,val) (guard (not (equal val (edie-wm-window-title window)))))
+         (setf (alist-get (car elt) changes) val))
+        ((and `(title . ,val) (guard (not (equal val (edie-wm-window-title window)))))
          (setf (edie-wm-window-title window) val)
-         (setq changes (plist-put changes :title val)))))
+         (setf (alist-get (car elt) changes) val))))
     changes))
 
+(defun edie-wm-monitor-make ()
+  "Create a new monitor."
+  (list 'monitor))
+
 (defun edie-wm-monitor-focused-p (monitor)
   "Return t if MONITOR is focused."
   (edie-wm-property monitor 'focused))
 
+(defun edie-wm-monitor-padding (monitor)
+  "Return the padding of MONITOR."
+  (or (cdr (assoc (edie-wm-property monitor 'name) edie-wm-monitor-padding-alist))
+      (cdr (assq nil edie-wm-monitor-padding-alist))))
+
 (defvar edie-wm--monitor-list nil)
 
 (defun edie-wm-current-monitor ()
+  (declare (edie-log t))
   (seq-find #'edie-wm-monitor-focused-p (edie-wm-monitor-list)))
 
 (defun edie-wm-monitor-list ()
-   (or edie-wm--monitor-list (edie-wm-monitor-reset-list)))
+  (declare (edie-log t))
+  (or edie-wm--monitor-list (edie-wm-reset-monitor-list)))
 
-(defun edie-wm-monitor-reset-list ()
+(defun edie-wm-reset-monitor-list ()
   "Reset the list of monitors."
+  (declare (edie-log t))
+  (interactive)
   (setq edie-wm--monitor-list (edie-wm-backend-monitor-list)))
 
 (defun edie-wm-on-monitor-add (_)
+  (declare (edie-log t))
   (edie-wm-monitor-reset-list)
-  (run-hook 'edie-wm-monitor-added-hook))
+  (run-hooks 'edie-wm-monitor-added-hook))
 
 (defun edie-wm-on-monitor-focus-change (name)
+  (declare (edie-log t))
   (dolist (mon (edie-wm-monitor-list))
     (edie-wm-set-property
-     mon 'focused (equal (edie-wm-property m 'name) name)))
-  (run-hook 'edie-wm-monitor-focus-changed-hook))
+     mon 'focused (equal (edie-wm-property mon 'name) name)))
+  (run-hooks 'edie-wm-monitor-focus-changed-hook))
 
 (defun edie-wm-on-monitor-remove (_)
+  (declare (edie-log t))
   (edie-wm-monitor-reset-list)
-  (run-hook 'edie-wm-monitor-removed-hook))
+  (run-hooks 'edie-wm-monitor-removed-hook))
 
 (defun edie-wm-workarea ()
   (pcase-let* ((mon (edie-wm-current-monitor))
-               ((map (:left p-left)
-                     (:top p-top)
-                     (:right p-right)
-                     (:bottom p-bot))
-                (cdr (or (assoc (edie-wm-property mon 'name) edie-wm-desktop-padding)
-                         (assoc nil edie-wm-desktop-padding))))
-               ((map :left :top :width :height) (edie-wm-screenarea)))
-    `(:left ,(+ left p-left)
-      :top ,(+ top p-top)
-      :width ,(- width p-left p-right)
-      :height ,(- height p-top p-bot))))
+               ((map ('left pad-left)
+                     ('top pad-top)
+                     ('right pad-right)
+                     ('bottom pad-bot))
+                (edie-wm-monitor-padding mon))
+               ((map ('left mon-left)
+                     ('top mon-top)
+                     ('width mon-width)
+                     ('height mon-height))
+                (edie-wm-screenarea)))
+    `((left . ,(+ mon-left pad-left))
+      (top . ,(+ mon-top pad-top))
+      (width . ,(- mon-width pad-left pad-right))
+      (height . ,(- mon-height pad-top pad-bot)))))
 
-(defun edie-wm-screenarea ()
-  (pcase-let (((map left top width height) (edie-wm-current-monitor)))
-    `(:left ,left :top ,top :width ,width :height ,height)))
+(defun edie-wm-screenarea (&optional monitor)
+  (let ((mon (or monitor (edie-wm-current-monitor))))
+    (edie-wm-properties mon '(left top width height))))
 
-(defun edie-wm-geometry (plist)
-  (pcase-let* (((map (:left wa-left) (:top wa-top) (:width wa-width) (:height wa-height))
-                (if (eq (map-elt plist :workarea) 'screen)
+(defun edie-wm-geometry (alist)
+  (declare (edie-log nil))
+  (pcase-let* (((map ('left wa-left) ('top wa-top) ('width wa-width) ('height wa-height))
+                (if (eq (cdr (assq 'workarea alist)) 'screen)
                     (edie-wm-screenarea)
                   (edie-wm-workarea)))
-               ((map :left :top :width :height) plist))
+               ((map left top width height) alist))
     (thread-last
-      (list :left (and left (+ wa-left (edie-wm-unit-pixel left wa-width)))
-            :top (and top (+ wa-top (edie-wm-unit-pixel top wa-height)))
-            :width (and width (edie-wm-unit-pixel width wa-width))
-            :height (and height (edie-wm-unit-pixel height wa-height)))
+      `((left . ,(and left (+ wa-left (edie-wm-unit-pixel left wa-width))))
+        (top . ,(and top (+ wa-top (edie-wm-unit-pixel top wa-height))))
+        (width . ,(and width (edie-wm-unit-pixel width wa-width)))
+        (height . ,(and height (edie-wm-unit-pixel height wa-height))))
       (map-filter (lambda (_ v) v))
-      (map-merge 'plist plist)
+      (map-merge 'alist alist)
       (edie-wm--adjust-margins))))
 
 (defun edie-wm-unit-pixel (fraction total)
   (cl-assert (and fraction total))
-
   (let ((size (pcase fraction
                 ((and (pred integerp) (guard (<= fraction total)))
                  fraction)
@@ -434,34 +518,31 @@ Return nil or the list of windows that match the filters."
                 ((seq '+ &rest operands)
                  (apply #'+ (mapcar (lambda (n) (edie-wm-unit-pixel n total)) operands))))))
     (cl-assert (numberp size))
-
     (truncate size)))
 
 (defun edie-wm-on-window-focus (wid)
-  (when (not (equal wid edie-wm--current-window-id))
-    (let ((window (cdr (assoc wid edie-wm--window-list))))
-      (cond
-       (window
-        (edie-wm-focus-window window))
-       ((not window)
-        (edie-wm-focus-window (cdr (assoc wid edie-wm--window-list))))
-       ((not wid)
-        (setq edie-wm--current-window-id nil))))))
+  (declare (edie-log t))
+  (cond
+   ((null wid)
+    (setq edie-wm--current-window-id nil))
+   ((null edie-wm--current-window-id)
+    (edie-wm-focus-window (edie-wm-window `((id . ,wid)))))
+   ((not (equal wid edie-wm--current-window-id))
+    (setq edie-wm--current-window-id wid))))
 
 (defun edie-wm-on-window-add (window)
+  (declare (edie-log t))
   ;; TODO ensure that window still exists
   (setf (map-elt edie-wm--window-list (edie-wm-window-id window)) window)
 
-  (let ((changes (edie-wm--apply-rules window)))
-    (setq edie-wm--current-window-id (edie-wm-window-id window))
-    (run-hooks 'edie-wm-window-added-hook)
+  (let ((edie-wm--current-window-id (edie-wm-window-id window)))
+    (run-hooks 'edie-wm-window-added-hook))
 
-    (edie-wm-focus-window window)
-
-    (when changes
-      (edie-wm-update-window window changes))))
+  (when-let ((changes (edie-wm-apply-rules window)))
+    (edie-wm-update-window window changes)))
 
 (defun edie-wm-on-window-remove (wid)
+  (declare (edie-log t))
   (when-let ((window (cdr (assoc wid edie-wm--window-list)))
              (edie-wm--current-window-id wid)
              (desktop-id (edie-wm-window-desktop window)))
@@ -476,61 +557,78 @@ Return nil or the list of windows that match the filters."
           (throw 'found w))))))
 
 (defun edie-wm-on-window-update (wid changes)
+  (declare (edie-log t))
   (when-let ((window (or (and wid (cdr (assoc wid edie-wm--window-list)))
                          (edie-wm-current-window)))
              (edie-wm--current-window-id wid)
              (actual-changes (edie-wm-window-merge-changes window changes)))
     (run-hooks 'edie-wm-window-updated-hook)
 
-    (when-let ((more-changes (edie-wm--apply-rules window)))
+    (when-let ((more-changes (edie-wm-apply-rules window)))
       (edie-wm-update-window window more-changes))))
 
-(defun edie-wm-on-desktop-focus-change ()
-  (let ((desktop-id (edie-wm-backend-current-desktop-id)))
-    (setf (edie-wm-monitor-desktop (edie-wm-current-monitor)) desktop-id)
-    (if-let ((window (car (edie-wm-window-filter-list (list :desktop desktop-id)))))
-        (edie-wm-focus-window window)
-      (setq edie-wm--current-window-id nil)))
-  (run-hooks 'edie-wm-desktop-focus-changed-hook))
+(defun edie-wm-on-desktop-focus-change (_)
+  (declare (edie-log t)))
 
-(defun edie-wm--adjust-margins (plist)
-  (if (eq (map-elt plist :workarea) 'screen)
-      plist
-    (pcase-let* (((map (:left wnd-left)
-                       (:top wnd-top)
-                       (:width wnd-width)
-                       (:height wnd-height)
-                       (:margins wnd-margins))
-                  plist)
+(defun edie-wm--adjust-margins (alist)
+  (if (eq (cdr (assq 'workarea alist)) 'screen)
+      alist
+    (pcase-let* (((map ('left wnd-left)
+                       ('top wnd-top)
+                       ('width wnd-width)
+                       ('height wnd-height)
+                       ('margins wnd-margins))
+                  alist)
                  (`(,wnd-m-left ,wnd-m-right ,wnd-m-top ,wnd-m-bot)
                   (make-list 4 (or wnd-margins edie-wm-window-margins))))
       (if (and wnd-left wnd-top wnd-width wnd-height)
-          (map-merge 'plist
-                     plist
-                     (list :left (+ wnd-left wnd-m-left)
-                           :top (+ wnd-top wnd-m-top)
-                           :width (- wnd-width wnd-m-right wnd-m-left)
-                           :height (- wnd-height wnd-m-top wnd-m-bot)))
-        plist))))
+          (map-merge 'alist
+                     alist
+                     `((left . ,(+ wnd-left wnd-m-left))
+                       (top . ,(+ wnd-top wnd-m-top))
+                       (width . ,(- wnd-width wnd-m-right wnd-m-left))
+                       (height . ,(- wnd-height wnd-m-top wnd-m-bot))))
+        alist))))
 
-(defun edie-wm--apply-rules (window)
+(defun edie-wm-apply-rules (window)
+  (declare (edie-log t))
   (let* ((new-props nil)
-         (rules (and window (edie-wm--find-rule window)))
+         (rules (and window (edie-wm-find-rule window)))
          result)
     (dolist (fun edie-wm-window-rules-functions)
       (setq result (funcall fun rules window))
-      (while (keywordp (car result))
-        (setq new-props (plist-put new-props (pop result) (pop result)))))
+      (dolist (elt result)
+        (push elt new-props)))
     new-props))
 
-(defun edie-wm--find-rule (window)
+(defun edie-wm-find-rule (window)
+  (declare (edie-log t))
   (cdr (seq-find (pcase-lambda (`(,filter . ,_))
                    (edie-wm-window-filter-match-p filter window))
                  edie-wm-rules-alist)))
 
-(cl-defun edie-wm-tile-maybe-tile ((&key tile &allow-other-keys) window)
+(defun edie-wm-tile--gen-commands (tiles)
+  (dolist (tile tiles)
+    (defalias (intern (format "edie-wm-tile-fit-%s" tile))
+      (lambda ()
+        (interactive)
+        (edie-wm-tile-fit tile)))
+    (defalias (intern (format "edie-wm-tile-focus-cycle-%s" tile))
+      (lambda ()
+        (interactive)
+        (edie-wm-tile-focus-cycle tile)))))
+
+(defcustom edie-wm-tile-alist nil
+  "Alist of tiles."
+  :type '(choice (const nil) (alist :key-type symbol :value-type sexp))
+  :set (lambda (symbol tiles)
+         (set-default symbol tiles)
+         (edie-wm-tile--gen-commands (mapcar #'car tiles))))
+
+(defun edie-wm-tile-maybe-tile (rules window)
   "Tile WINDOW if it matches RULES."
-  (let ((tiles (ensure-list tile))
+  (declare (edie-log t))
+  (let ((tiles (ensure-list (cdr (assq 'tile rules))))
         (desktop (edie-wm-current-desktop))
         tile)
     (cond
@@ -545,6 +643,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-focus-cycle (tile)
   "Cycle focus between windows in TILE."
+  (declare (edie-log t))
   (if (eq (edie-wm-tile-current-tile) tile)
       (let* ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
              (window (car (reverse windows))))
@@ -553,31 +652,37 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-focus-tile (tile)
   "Focus the topmost window of TILE."
+  (declare (edie-log t))
   (let* ((desktop (edie-wm-current-desktop)))
     (when-let ((window (car (edie-wm-tile-window-list desktop tile))))
       (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
   "Return the tile that the currently focused window is in."
+  (declare (edie-log t))
   (when-let ((w (edie-wm-current-window)))
     (edie-wm-tile-window-tile w)))
 
-(defun edie-wm-tile-window-tile (window)
+(defun edie-wm-tile-window-tile (&optional window)
   "Return the tile that WINDOW is in."
-  (pcase-let (((cl-struct edie-wm-window left top width height) window))
+  (declare (edie-log t))
+  (pcase-let* ((window (or window (edie-wm-current-window)))
+               ((cl-struct edie-wm-window left top width height) window))
     (car-safe (seq-find
-               (pcase-lambda (`(,_ . ,(map (:left tl) (:top tt) (:width tw) (:height th))))
+               (pcase-lambda (`(,_ . ,(map ('left tl) ('top tt) ('width tw) ('height th))))
                  (and (= left tl) (= top tt) (= width tw) (= height th)))
                (edie-wm-tile--geometries)))))
 
 (defun edie-wm-tile-window-list (desktop tile)
   "Return a list of windows in tile TILE of DESKTOP."
-  (pcase-let* (((seq 'desktop _ desktop-id) desktop)
-               (geom (edie-wm-geometry (edie-wm-tile--spec tile))))
-    (edie-wm-window-filter-list `(:desktop ,desktop-id ,@geom))))
+  (declare (edie-log t))
+  (let ((desktop-id (edie-wm-property desktop 'id))
+        (geom (edie-wm-geometry (edie-wm-tile--spec tile))))
+    (edie-wm-window-filter-list `((desktop . ,desktop-id) ,@geom))))
 
 (defun edie-wm-tile-fit (tile &optional window)
   "Fit WINDOW to TILE's dimensions."
+  (declare (edie-log t))
   (when-let ((w (or window (edie-wm-current-window))))
     (edie-wm-update-window w (edie-wm-geometry (edie-wm-tile--spec tile)))))
 

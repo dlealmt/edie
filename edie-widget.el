@@ -61,6 +61,7 @@
 
 (defun edie-widget-render-to (frame spec)
   ""
+  (declare (edie-log nil))
   (let ((spec (or spec (frame-parameter frame 'edie-bar:spec))))
     (let* ((update-function (lambda (&rest _) (edie-widget--refresh frame)))
            (edie-widget--install t))
@@ -84,6 +85,7 @@
 
 (defun edie-widget--refresh-now (frame)
   ""
+  (declare (edie-log nil))
   (with-selected-frame frame
     (with-current-buffer (window-buffer (frame-root-window))
       (when (not (minibuffer-prompt)) ;; TODO We're assuming frame is a minibuffer frame

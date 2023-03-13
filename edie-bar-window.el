@@ -30,6 +30,7 @@
 
 (cl-defmethod edie-widget-render ((_ (head window)))
   ""
+  (declare (edie-log nil))
   (edie-widget-add-update-hook 'edie-wm-window-focus-changed-hook
                                'edie-wm-window-updated-hook
                                'edie-wm-window-closed-hook)
