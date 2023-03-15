@@ -86,7 +86,7 @@
             (,dir (with-current-buffer (current-buffer)
                     default-directory)))
        (edie-run--ensure-driver-frame)
-       (edie-wm-focus-window (edie-wm-window `(:title ,edie-run-proxy-frame-name)))
+       (edie-wm-focus-window (edie-wm-window `((title . ,edie-run-proxy-frame-name))))
 
        (with-selected-frame edie-run--driver-frame
          (with-current-buffer (window-buffer (frame-root-window))
@@ -105,9 +105,9 @@
   (cl-pushnew filters edie-run-filter-list :test #'equal)
 
   (if-let ((window (edie-wm-window filters)))
-      (edie-wm-update-window window `(:hidden nil
-                                      :focus t
-                                      :desktop ,(edie-wm-current-desktop)))
+      (edie-wm-update-window window `((hidden . nil)
+                                      (focus . t)
+                                      (desktop . ,(edie-wm-current-desktop))))
     (apply command command-args)))
 
 (defun edie-run--ensure-driver-frame ()
