@@ -131,8 +131,13 @@ will be applied to windows matched by FILTERS."
         (edie-wm-backend-start)
 
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)
+        (add-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close 95)
+
         (edie-wm-reset-window-list))
+
     (edie-wm-backend-stop)
+
+    (remove-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close)
     (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)))
 
 (defun edie-wm-set-properties (obj props)
@@ -181,7 +186,7 @@ will be applied to windows matched by FILTERS."
 
 (defun edie-wm-desktop-make ()
   "Create a new desktop."
-  '(desktop))
+  (list 'desktop))
 
 (defun edie-wm-desktop (filters)
   "Return the desktop named NAME."
@@ -190,7 +195,7 @@ will be applied to windows matched by FILTERS."
     (dolist (dsk (edie-wm-desktop-list))
       (or (catch 'not-found
             (pcase-dolist (`(,key . ,value) filters)
-              (or (eq (edie-wm-property dsk key) value)
+              (or (equal (edie-wm-property dsk key) value)
                   (throw 'not-found t))))
           (throw 'found dsk)))))
 
@@ -275,16 +280,15 @@ switch to."
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
   (declare (edie-log t))
+
+  (edie-wm-set-property (edie-wm-current-desktop) 'focused-window window)
+
   (let* ((wid (edie-wm-window-id window))
          (elt (assoc wid edie-wm--window-list)))
-    (setq edie-wm--window-list (delq elt edie-wm--window-list)
-          edie-wm--current-window-id wid)
+    (setq edie-wm--window-list (delq elt edie-wm--window-list))
     (setf (alist-get wid edie-wm--window-list) window)
-    (setq edie-wm--current-window-id wid)
 
-    (edie-wm-backend-window-focus wid)
-
-    (run-hooks 'edie-wm-window-focus-changed-hook)))
+    (edie-wm-backend-window-focus wid)))
 
 (defun edie-wm-select-window ()
   "Prompt for a window."
@@ -301,7 +305,6 @@ switch to."
   "Close the active window or WINDOW."
   (declare (edie-log t))
   (interactive)
-
   (when-let ((window (or window (edie-wm-current-window))))
     (run-hook-with-args-until-success 'edie-wm-window-close-functions window)))
 
@@ -321,14 +324,12 @@ switch to."
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
   (declare (edie-log t))
-  (edie-wm-window `((id . ,edie-wm--current-window-id))))
+  (edie-wm-window `((id . ,(edie-wm-property (edie-wm-current-desktop) 'focused-window)))))
 
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
   (declare (edie-log t))
-  (seq-find (lambda (wnd)
-              (edie-wm-window-filter-match-p filters wnd))
-            (edie-wm-window-list)))
+  (car (edie-wm-window-list filters)))
 
 (defun edie-wm-window-alist ()
   "An alist of windows where the keys are the window ids."
@@ -343,10 +344,12 @@ switch to."
       (push (cons (edie-wm-window-id w) w) windows))
     (setq edie-wm--window-list (nreverse windows))))
 
-(defun edie-wm-window-list ()
+(defun edie-wm-window-list (&optional filters)
   "The list of windows across all desktops."
   (declare (edie-log t))
-  (map-values (edie-wm-window-alist)))
+  (if filters
+      (edie-wm-window-filter-list filters)
+    (mapcar #'cdr (edie-wm-window-alist))))
 
 (defun edie-wm-window-filter-list (filters &optional windows)
   "Return all windows matching FILTERS.
@@ -524,37 +527,29 @@ Return nil or the list of windows that match the filters."
   (declare (edie-log t))
   (cond
    ((null wid)
-    (setq edie-wm--current-window-id nil))
-   ((null edie-wm--current-window-id)
-    (edie-wm-focus-window (edie-wm-window `((id . ,wid)))))
-   ((not (equal wid edie-wm--current-window-id))
-    (setq edie-wm--current-window-id wid))))
+    (edie-wm-set-property (edie-wm-current-desktop) 'focused-window nil)
+    (run-hooks 'edie-wm-window-focus-changed-hook))
+   ((equal (edie-wm-property (edie-wm-current-desktop) 'focused-window) wid)
+    (run-hooks 'edie-wm-window-focus-changed-hook))))
 
 (defun edie-wm-on-window-add (window)
   (declare (edie-log t))
   ;; TODO ensure that window still exists
   (setf (map-elt edie-wm--window-list (edie-wm-window-id window)) window)
 
-  (let ((edie-wm--current-window-id (edie-wm-window-id window)))
-    (run-hooks 'edie-wm-window-added-hook))
+  (run-hooks 'edie-wm-window-added-hook)
 
   (when-let ((changes (edie-wm-apply-rules window)))
     (edie-wm-update-window window changes)))
 
 (defun edie-wm-on-window-remove (wid)
   (declare (edie-log t))
-  (when-let ((window (cdr (assoc wid edie-wm--window-list)))
-             (edie-wm--current-window-id wid)
-             (desktop-id (edie-wm-window-desktop window)))
-    (run-hooks 'edie-wm-window-closed-hook)
+  (when-let ((elt (assoc wid edie-wm--window-list))
+             (window (cdr elt))
+             (desktop (edie-wm-desktop `((id . ,(edie-wm-window-desktop window))))))
+    (setq edie-wm--window-list (delq elt edie-wm--window-list)))
 
-    (setq edie-wm--window-list (delq (assoc wid edie-wm--window-list) edie-wm--window-list))
-
-    (catch 'found
-      (dolist (w (edie-wm-window-list))
-        (when (equal (edie-wm-window-desktop w) desktop-id)
-          (edie-wm-focus-window w)
-          (throw 'found w))))))
+  (run-hooks 'edie-wm-window-closed-hook))
 
 (defun edie-wm-on-window-update (wid changes)
   (declare (edie-log t))

@@ -49,13 +49,10 @@
       (progn
         (unless (frame-live-p edie-run--driver-frame)
           (edie-run--ensure-driver-frame))
-        (push #'edie-run--on-window-close
-              edie-wm-window-close-functions))
+        (add-hook 'edie-wm-window-close-functions #'edie-run-window-close))
     (when (frame-live-p edie-run--driver-frame)
       (delete-frame edie-run--driver-frame))
-    (setq edie-wm-window-close-functions
-          (delq #'edie-run--on-window-close
-                edie-wm-window-close-functions))))
+    (remove-hook 'edie-wm-window-close-functions #'edie-run--on-window-close)))
 
 (defvar edie-run-frame-alist
   '((alpha . 20)
@@ -107,7 +104,7 @@
   (if-let ((window (edie-wm-window filters)))
       (edie-wm-update-window window `((hidden . nil)
                                       (focus . t)
-                                      (desktop . ,(edie-wm-current-desktop))))
+                                      (desktop . ,(edie-wm-property (edie-wm-current-desktop) 'id))))
     (apply command command-args)))
 
 (defun edie-run--ensure-driver-frame ()
@@ -135,7 +132,7 @@
       (setq-local frame-alpha-lower-limit 0)
       buffer)))
 
-(defun edie-run--on-window-close (window)
+(defun edie-run-window-close (window)
   (when (seq-find (lambda (filter)
                     (edie-wm-window-filter-match-p filter window))
                   edie-run-filter-list)

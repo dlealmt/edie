@@ -110,6 +110,9 @@ The following event types are supported (listed in order of priority):
     (setq edie-wm-hypr--event-queue-timer
         (run-with-timer edie-wm-hypr--event-queue-interval nil #'edie-wm-hypr--flush-events))))
 
+(defun edie-wm-backend-window-close (window)
+  (edie-wm-hypr--write 'closewindow (format "address:0x%s" (edie-wm-window-id window))))
+
 (defun edie-wm-hypr--handle-event (event)
   (pcase event
     ((rx "activewindowv2>>" (let wid (+ hex)))
@@ -263,18 +266,38 @@ The following event types are supported (listed in order of priority):
 
 (defun edie-wm-backend-desktop-list ()
   (let ((desktops (edie-wm-default-desktop-list))
+        (hyprs (edie-wm-hypr--desktop-list))
         results)
     (dotimes (i (length desktops))
-      (let ((dsk (nth i desktops)))
+      (let ((dsk (nth i desktops))
+            (tmp-hyprs hyprs)
+            hypr)
         (edie-wm-set-property dsk 'id (number-to-string (1+ i)))
+
+        (while (setq hypr (car tmp-hyprs))
+          (if (equal (edie-wm-property hypr 'id) (edie-wm-property dsk 'id))
+              (progn
+                (edie-wm-set-property dsk 'focused-window (edie-wm-property hypr 'focused-window))
+                (setq tmp-hyprs nil))
+            (setq tmp-hyprs (cdr tmp-hyprs))))
         (push dsk results)))
     (nreverse results)))
 
+(defun edie-wm-hypr--desktop-list ()
+  (let* ((strings (split-string (edie-wm-hypr--read 'workspaces)
+                                "\n\n" t "[[:space:]\n]+"))
+         (desktops nil))
+    (dolist (str strings (nreverse desktops))
+      (push (edie-wm-hypr--parse-desktop str) desktops))))
+
 (defun edie-wm-hypr--parse-desktop (string)
-  (pcase (car (split-string string "\n" t "[[:space:]]+"))
-    ((rx bos "workspace ID " (let id (1+ digit)) " (" (not ")") ")"
-         " on monitor " (let monitor (1+ any)) ":" eos)
-     `((id . ,id) (monitor-name . ,monitor)))))
+  (let ((desktop (edie-wm-desktop-make)))
+    (dolist (line (split-string string "\n" t "[[:space:]]+") desktop)
+      (pcase line
+        ((rx bos "workspace ID " (let id (+ digit)))
+         (edie-wm-set-property desktop 'id id))
+        ((rx bos "lastwindow: 0x" (let wid (+ hex)) eos)
+         (edie-wm-set-property desktop 'focused-window wid))))))
 
 (defun edie-wm-hypr--read (&rest args)
   (with-output-to-string
@@ -282,10 +305,11 @@ The following event types are supported (listed in order of priority):
       (apply #'call-process (car args) nil standard-output nil (cdr args)))))
 
 (defun edie-wm-hypr--write (&rest args)
-  (apply #'start-process "hyprctl" "*edie-wm-hyprland-commands*"
+  (apply #'start-process "hyprctl" " *edie-wm-hyprland-commands*"
          (edie-wm-hypr--ctl (cons 'dispatch args))))
 
 (defun edie-wm-hypr--ctl (args)
+  (declare (edie-debug t))
   (let ((args (mapcar (lambda (e)
                         (cond
                          ((numberp e)
