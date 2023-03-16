@@ -68,7 +68,6 @@
    "*edie-state*"
    t))
 
-
 (defun edie-debug--log-buffer ()
   (if-let ((buffer (get-buffer "*edie-debug*")))
       buffer
@@ -114,24 +113,19 @@
           (newline))))
     result))
 
-(defun edie-debug--log-function (enabled fname arglist fn args)
-  (cond
-   ((and edie-debug (not enabled) (not edie-debug--log-inhibit))
-      (let ((edie-debug--log-inhibit t))
-        (apply fn args)))
-   ((and edie-debug edie-debug--log-inhibit)
-    (edie-debug--log fname arglist fn args))
-   (t
-    (apply fn args))))
+(defun edie-debug--log-function (fname arglist fn args)
+  (edie-debug--log fname arglist fn args))
 
 (defun edie-debug--log-setup (f arglist enable)
   (let ((sym (intern (format "edie-debug--log--instance--%s" f))))
-    `(progn
-       (defalias ',sym
-         #'(lambda (fn &rest args)
-             (edie-debug--log-function ,enable ',f ',arglist fn args)))
-
-       ,(list 'advice-add (list 'quote f) :around (list 'quote sym)))))
+    (if enable
+        `(advice-add
+          (quote ,f)
+          :around #'(lambda (fn &rest args)
+                      (edie-debug--log-function
+                       (quote ,f) (quote ,arglist) fn args))
+          '((name . ,sym)))
+      `(advice-remove (quote ,f) (quote ,sym)))))
 
 (defmacro edie-match (expr expval)
   "Checke if EXPR match the `pcase' pattern EXPVAL."

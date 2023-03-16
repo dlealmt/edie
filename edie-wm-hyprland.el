@@ -174,7 +174,7 @@ The following event types are supported (listed in order of priority):
         ((seq 'wnd-upd wid &rest changes)
          (edie-wm-on-window-update wid changes))))))
 
-(defun edie-wm-hypr--window-raise-active ()
+(defun edie-wm-backend-window-raise-current ()
   (declare (edie-log t))
   (edie-wm-hypr--write 'bringactivetotop))
 
@@ -309,7 +309,7 @@ The following event types are supported (listed in order of priority):
          (edie-wm-hypr--ctl (cons 'dispatch args))))
 
 (defun edie-wm-hypr--ctl (args)
-  (declare (edie-debug t))
+  (declare (edie-log nil))
   (let ((args (mapcar (lambda (e)
                         (cond
                          ((numberp e)
