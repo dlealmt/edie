@@ -231,11 +231,7 @@ switch to."
 
   (edie-wm-backend-desktop-focus desktop)
 
-  (run-hooks 'edie-wm-desktop-focus-changed-hook)
-
-  (when-let (((not (edie-wm-current-window)))
-             (window (edie-wm-window `((desktop . ,(edie-wm-property desktop 'id))))))
-    (edie-wm-focus-window window)))
+  )
 
 (defun edie-wm-default-desktop-list ()
   "Return the default desktop list."
@@ -581,7 +577,14 @@ Return nil or the list of windows that match the filters."
     (truncate size)))
 
 (defun edie-wm-on-desktop-focus-change (desktop-id)
-  (declare (edie-log t)))
+  (declare (edie-log t))
+  (when-let ((monitor (edie-wm-current-monitor))
+             ((equal (edie-wm-property monitor 'focused-desktop) desktop-id)))
+    (run-hooks 'edie-wm-desktop-focus-changed-hook)
+
+    (when-let (((not (edie-wm-current-window)))
+               (window (edie-wm-window `((desktop . ,(edie-wm-property desktop 'id))))))
+      (edie-wm-focus-window window))))
 
 (defun edie-wm--adjust-margins (alist)
   (if (eq (cdr (assq 'workarea alist)) 'screen)
