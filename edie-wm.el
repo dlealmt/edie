@@ -512,6 +512,7 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-monitor-add (_)
   (declare (edie-log t))
   (edie-wm-monitor-reset-list)
+  (edie-wm-desktop-reset-list)
   (run-hooks 'edie-wm-monitor-added-hook))
 
 (defun edie-wm-on-monitor-focus-change (name)
@@ -524,6 +525,7 @@ Return nil or the list of windows that match the filters."
 (defun edie-wm-on-monitor-remove (_)
   (declare (edie-log t))
   (edie-wm-monitor-reset-list)
+  (edie-wm-desktop-reset-list)
   (run-hooks 'edie-wm-monitor-removed-hook))
 
 (defun edie-wm-workarea ()
