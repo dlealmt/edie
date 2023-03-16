@@ -135,7 +135,7 @@ will be applied to windows matched by FILTERS."
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)
         (add-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close 95)
 
-        (edie-wm-reset-window-list))
+        (edie-wm-window-reset-list))
 
     (edie-wm-backend-stop)
 
@@ -243,7 +243,7 @@ switch to."
             `(desktop . ((name . ,name))))
           edie-wm-default-desktop-list))
 
-(defun edie-wm-reset-desktop-list ()
+(defun edie-wm-desktop-reset-list ()
   "Reset the desktop list."
   (interactive)
   (setq edie-wm--desktop-list nil)
@@ -389,7 +389,7 @@ switch to."
   "An alist of windows where the keys are the window ids."
   (or edie-wm--window-list (edie-wm-reset-window-list)))
 
-(defun edie-wm-reset-window-list ()
+(defun edie-wm-window-reset-list ()
   "Reload the window list."
   (declare (edie-log t))
   (interactive)
