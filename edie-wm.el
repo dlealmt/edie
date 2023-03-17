@@ -187,7 +187,7 @@ will be applied to windows matched by FILTERS."
          (set-default symbol value)
          (edie-wm-desktop--gen-commands value)))
 
-(defvar edie-wm--desktop-list nil)
+(defvar edie-wm--desktop-alist nil)
 
 (defun edie-wm-desktop-make ()
   "Create a new desktop."
@@ -242,14 +242,14 @@ switch to."
 (defun edie-wm-desktop-reset-list ()
   "Reset the desktop list."
   (interactive)
-  (setq edie-wm--desktop-list nil)
-  (edie-wm-backend-desktop-list))
+  (setq edie-wm--desktop-alist (mapcar (lambda (dsk)
+                                         (cons (edie-wm-property dsk 'id) dsk))
+                                       (edie-wm-backend-desktop-list))))
 
 (defun edie-wm-desktop-list ()
   "The list of virtual desktops."
   (declare (edie-log nil))
-  (or edie-wm--desktop-list
-      (setq edie-wm--desktop-list (edie-wm-backend-desktop-list))))
+  (mapcar #'cdr (or edie-wm--desktop-alist (edie-wm-desktop-reset-list))))
 
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
