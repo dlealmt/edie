@@ -210,12 +210,8 @@ will be applied to windows matched by FILTERS."
   "The desktop we are currently working in."
   (declare (edie-log nil))
   (or edie-wm--current-desktop
-      (catch 'found
-        (let ((mon (edie-wm-current-monitor)))
-          (dolist (desktop (edie-wm-desktop-list))
-            (when (equal (edie-wm-property desktop 'id)
-                         (edie-wm-property mon 'focused-desktop))
-              (throw 'found desktop)))))))
+      (let ((mon (edie-wm-current-monitor)))
+        (edie-wm-desktop `((monitor . ,(edie-wm-property mon 'id)))))))
 
 (defun edie-wm-switch-to-desktop (desktop)
   "Switch to desktop DESKTOP.
