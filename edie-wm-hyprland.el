@@ -212,6 +212,7 @@
           (if (equal (edie-wm-property hypr 'id) (edie-wm-property dsk 'id))
               (progn
                 (edie-wm-set-property dsk 'focused-window (edie-wm-property hypr 'focused-window))
+                (edie-wm-set-property dsk 'monitor (edie-wm-property hypr 'monitor))
                 (setq tmp-hyprs nil))
             (setq tmp-hyprs (cdr tmp-hyprs))))
         (push dsk results)))
@@ -220,18 +221,33 @@
 (defun edie-wm-hypr--desktop-list ()
   (let* ((strings (split-string (edie-wm-hypr--read 'workspaces)
                                 "\n\n" t "[[:space:]\n]+"))
+         (monitors (edie-wm-backend-monitor-list))
          (desktops nil))
     (dolist (str strings (nreverse desktops))
-      (push (edie-wm-hypr--parse-desktop str) desktops))))
+      (push (edie-wm-hypr--parse-desktop str monitors) desktops))))
 
-(defun edie-wm-hypr--parse-desktop (string)
-  (let ((desktop (edie-wm-desktop-make)))
-    (dolist (line (split-string string "\n" t "[[:space:]]+") desktop)
+(defun edie-wm-hypr--parse-desktop (string monitors)
+  (let* ((desktop (edie-wm-desktop-make))
+         (lines (split-string string "\n" t "[[:space:]]+"))
+         (line (car lines))
+         (match (string-match (rx bos "workspace ID " (group (+ digit))
+                                  " (" (+ (not ")")) ")"
+                                  " on monitor " (group (+ (not ":"))) ":" eos)
+                              line)))
+    (edie-wm-set-property desktop 'id (match-string 1 line))
+    (edie-wm-set-property desktop
+                          'monitor
+                          (edie-wm-property
+                           (seq-find (lambda (mon)
+                                       (equal (edie-wm-property mon 'name) (match-string 2 line)))
+                                     monitors)
+                           'id))
+
+    (dolist (line (cdr lines) desktop)
       (pcase line
-        ((rx bos "workspace ID " (let id (+ digit)))
-         (edie-wm-set-property desktop 'id id))
         ((rx bos "lastwindow: 0x" (let wid (+ hex)) eos)
-         (edie-wm-set-property desktop 'focused-window wid))))))
+         (when (not (string= wid "0"))
+           (edie-wm-set-property desktop 'focused-window wid)))))))
 
 (defun edie-wm-hypr--read (&rest args)
   (with-output-to-string
