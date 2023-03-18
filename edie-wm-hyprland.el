@@ -50,12 +50,6 @@
     (when (string-match (rx "active workspace: " (group (+ digit))) str)
       (match-string 1 str))))
 
-(defun edie-wm-backend-desktop-id-list ()
-  (let ((ids nil))
-    (dotimes (i (length edie-wm-default-desktop-list))
-      (push (number-to-string (1+ i)) ids))
-    (nreverse ids)))
-
 (defun edie-wm-backend-window-list ()
   (declare (edie-log t))
   (mapcar #'edie-wm-hypr--parse-window
@@ -165,6 +159,9 @@
            (setf (edie-wm-window-desktop window) t))))
       window)))
 
+(defun edie-wm-hypr--current-monitor ()
+  (seq-filter (lambda (mon) (edie-wm-property mon 'focused)) (edie-wm-backend-monitor-list)))
+
 (defun edie-wm-backend-monitor-list ()
   (declare (edie-log t))
   (let* ((strings (split-string (edie-wm-hypr--read 'monitors)
@@ -199,24 +196,19 @@
   (edie-wm-hypr--write 'workspace (edie-wm-property desktop 'id)))
 
 (defun edie-wm-backend-desktop-list ()
-  (let ((desktops (edie-wm-default-desktop-list))
-        (hyprs (edie-wm-hypr--desktop-list))
-        results)
-    (dotimes (i (length desktops))
-      (let ((dsk (nth i desktops))
-            (tmp-hyprs hyprs)
-            hypr)
-        (edie-wm-set-property dsk 'id (number-to-string (1+ i)))
+  (let ((hypr-dsks (edie-wm-hypr--desktop-list))
+        desktops)
+    (dotimes (i (length edie-wm-desktops))
+      (let ((id (number-to-string (1+ i)))
+            dsk (seq-find (lambda (hypr) (equal (edie-wm-property hypr 'id) id)) hypr-dsks))
+        (when dsk
+          (setq dsk (edie-wm-desktop-make))
 
-        (while (setq hypr (car tmp-hyprs))
-          (if (equal (edie-wm-property hypr 'id) (edie-wm-property dsk 'id))
-              (progn
-                (edie-wm-set-property dsk 'focused-window (edie-wm-property hypr 'focused-window))
-                (edie-wm-set-property dsk 'monitor (edie-wm-property hypr 'monitor))
-                (setq tmp-hyprs nil))
-            (setq tmp-hyprs (cdr tmp-hyprs))))
-        (push dsk results)))
-    (nreverse results)))
+          (edie-wm-set-property dsk 'id id)
+          (edie-wm-set-property dsk 'focused-window (edie-wm-property hypr 'focused-window))
+          (edie-wm-set-property dsk 'monitor (edie-wm-property (edie-wm-hypr--current-monitor) 'id)))
+        (push dsk desktops)))
+    (nreverse desktops)))
 
 (defun edie-wm-hypr--desktop-list ()
   (let* ((strings (split-string (edie-wm-hypr--read 'workspaces)

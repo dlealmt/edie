@@ -169,20 +169,20 @@ will be applied to windows matched by FILTERS."
           (push (cons prop (edie-wm-property obj prop)) props)))
     (cdr obj)))
 
-(defun edie-wm-desktop--gen-commands (names)
-  (dolist (name names)
-    (defalias (intern (format "edie-wm-switch-to-desktop-%s" name))
+(defun edie-wm-desktop--gen-commands (num-desktops)
+  (dotimes (i num-desktops)
+    (defalias (intern (format "edie-wm-switch-to-desktop-%s" i))
       (lambda ()
         (interactive)
-        (edie-wm-switch-to-desktop (edie-wm-desktop `((name . ,name))))))
-    (defalias (intern (format "edie-wm-window-to-desktop-%s" name))
+        (edie-wm-switch-to-desktop (nth i (edie-wm-desktop-list)))))
+    (defalias (intern (format "edie-wm-window-to-desktop-%s" i))
       (lambda ()
         (interactive)
-        (edie-wm-window-to-desktop (edie-wm-desktop `((name . ,name))))))))
+        (edie-wm-window-to-desktop (nth i (edie-wm-desktop-list)))))))
 
-(defcustom edie-wm-default-desktop-list '(default)
-  "A list of desktop names."
-  :type '(repeat symbol)
+(defcustom edie-wm-desktops 5
+  "The number of known desktops."
+  :type 'natnum
   :set (lambda (symbol value)
          (set-default symbol value)
          (edie-wm-desktop--gen-commands value)))
@@ -225,15 +225,7 @@ switch to."
   (edie-wm-set-property (edie-wm-current-monitor)
                         'focused-desktop (edie-wm-property desktop 'id))
 
-  (edie-wm-backend-desktop-focus desktop)
-
-  )
-
-(defun edie-wm-default-desktop-list ()
-  "Return the default desktop list."
-  (mapcar (lambda (name)
-            `(desktop . ((name . ,name))))
-          edie-wm-default-desktop-list))
+  (edie-wm-backend-desktop-focus desktop))
 
 (defun edie-wm-desktop-reset-list ()
   "Reset the desktop list."
