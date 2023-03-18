@@ -37,7 +37,7 @@
 
   `(box nil
      (text nil ,(if-let ((window (edie-wm-current-window)))
-                    (edie-wm-window-title window)
+                    (edie-wm-property window 'title)
                   ""))))
 
 (provide 'edie-bar-window)

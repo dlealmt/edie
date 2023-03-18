@@ -53,7 +53,7 @@
   (let ((desktop-id (edie-wm-property (edie-wm-current-desktop) 'id))
         used-desktops)
     (dolist (w (edie-wm-window-list))
-      (cl-pushnew (edie-wm-window-desktop w) used-desktops))
+      (cl-pushnew (edie-wm-property w 'desktop) used-desktops))
 
     `(box ((spacing . ,(or (dom-attr widget 'spacing) 8)))
           ,@(mapcar (lambda (d)
