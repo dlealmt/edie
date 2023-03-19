@@ -547,7 +547,7 @@ Return nil or the list of windows that match the filters."
   (declare (edie-log t))
   (if (eq (edie-wm-tile-current-tile) tile)
       (if-let ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
-               (window (car (reverse windows))))
+               (window (car windows)))
           (edie-wm-focus-window window))
     (edie-wm-tile-focus-tile tile)))
 
