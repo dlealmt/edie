@@ -55,22 +55,24 @@
 
 (defun edie-wm-hypr--handle-event (event)
   (pcase event
-    ((rx "activewindowv2>>" (let wid (+ hex)))
-     (edie-wm-on-window-focus wid))
     ((rx "activewindowv2>>,")
      (edie-wm-on-window-focus nil))
-    ((rx "movewindow>>" (let wid (+ hex)) "," (let did (+ digit)))
-     (edie-wm-on-window-update wid `((desktop . ,did))))
-    ((rx "closewindow>>" (let wid (+ hex)))
-     (edie-wm-on-window-remove wid))
-    ((rx "focusedmon>>" (let mon (+ (not ","))) "," (let did (+ any)))
-     (edie-wm-on-monitor-focus-change mon))
-    ((rx bos "workspace>>" (let did (+ digit)))
-     (edie-wm-on-desktop-focus-change (edie-wm-hypr--desktop did)))
-    ((rx "monitoradded>>" (let name (+ any)))
-     (edie-wm-on-monitor-add (cons 'mon-add name)))
-    ((rx "monitorremoved>>" (let name (+ any)))
-     (edie-wm-on-monitor-remove name))))
+    ((rx "activewindowv2>>")
+     (edie-wm-on-window-focus nil))
+    ((rx "openwindow>>")
+     (edie-wm-on-window-add nil))
+    ((rx "movewindow>>")
+     (edie-wm-on-window-update nil nil))
+    ((rx "closewindow>>")
+     (edie-wm-on-window-remove nil))
+    ((rx "focusedmon>>")
+     (edie-wm-on-monitor-focus-change nil))
+    ((rx bos "workspace>>")
+     (edie-wm-on-desktop-focus-change nil))
+    ((rx "monitoradded>>")
+     (edie-wm-on-monitor-add nil))
+    ((rx "monitorremoved>>")
+     (edie-wm-on-monitor-remove nil))))
 
 (defun edie-wm-backend-window-list ()
   (declare (edie-log nil))
@@ -93,8 +95,9 @@
 
     window))
 
-(defun edie-wm-backend-window-raise-current ()
+(defun edie-wm-backend-window-raise (_window)
   (declare (edie-log t))
+  ;; TODO check if _window is the active window
   (edie-wm-hypr--write 'bringactivetotop))
 
 (defun edie-wm-backend-window-close (window)
@@ -108,7 +111,7 @@
   (declare (edie-log t))
   (cl-assert props t)
 
-  (pcase-let (((map left top width height focus monitor) props))
+  (pcase-let (((map left top width height monitor) props))
     (when (and left top)
       (cl-assert (and (numberp left) (numberp top)) t)
       (edie-wm-hypr--write 'moveactive 'exact left top))

@@ -132,14 +132,17 @@ will be applied to windows matched by FILTERS."
 
         (add-hook 'edie-wm-window-added-hook #'edie-wm-apply-rules)
         (add-hook 'edie-wm-window-updated-hook #'edie-wm-apply-rules)
+        (add-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-raise)
         (add-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)
         (add-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close 95))
 
     (edie-wm-backend-stop)
 
+    (remove-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close)
+
+    (remove-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-raise)
     (remove-hook 'edie-wm-window-added-hook #'edie-wm-apply-rules)
     (remove-hook 'edie-wm-window-updated-hook #'edie-wm-apply-rules)
-    (remove-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close)
     (remove-hook 'edie-wm-window-rules-functions #'edie-wm-tile-maybe-tile)))
 
 (defun edie-wm-set-properties (obj props)
@@ -267,10 +270,10 @@ switch to."
                           (edie-wm-window-list))))
     (map-elt indexed (completing-read "Window: " indexed))))
 
-(defun edie-wm-window-raise-current ()
+(defun edie-wm-window-raise (&optional window)
   "Raise WINDOW."
   (declare (edie-log t))
-  (edie-wm-backend-window-raise-current))
+  (edie-wm-backend-window-raise window))
 
 (defun edie-wm-window-close (&optional window)
   "Close the active window or WINDOW."
