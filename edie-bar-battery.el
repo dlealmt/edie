@@ -36,25 +36,20 @@
   :group 'edie-bar
   :type 'string)
 
-(cl-defmethod edie-widget-render (((&whole battery _ attributes &rest) (head battery)))
-  ""
-  (edie-widget-add-install-hook #'display-battery-mode)
-  (edie-widget-add-update-hook 'battery-update-functions)
+(edie-widget-define battery
+  :hook battery-update-functions
 
-  (pcase-let (((map format icon) attributes)
-              (batt (funcall battery-status-function)))
-    `(box ,attributes
-       (icon ((name . ,(edie-bar-battery--icon icon batt))))
-       (text nil ,(format-spec (or format edie-bar-battery-format) batt)))))
+  :init
+  (lambda ()
+    (display-battery-mode +1))
 
-(defun edie-bar-battery--icon (icon-name battery)
-  (cond
-   ((eq icon-name 'moving-battery)
-    (pcase battery
-      ((map (?p (and "100" (app string-to-number charge))))
-       "battery-charging")
-      ((map (?p (app string-to-number charge)))
-       (format "battery-%d" (- charge (% charge 10))))))))
+  :state
+  (pcase-lambda (_ _)
+    (funcall battery-status-function))
+
+  :render
+  (pcase-lambda ((and props (map format icon)) status)
+    `(text nil "")))
 
 (provide 'edie-bar-battery)
 ;;; edie-bar-battery.el ends here

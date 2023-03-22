@@ -42,29 +42,39 @@
   "Name of the icon used to symbolize a desktop."
   :type 'symbol)
 
-(defvar edie-bar-desktop-list--svg nil)
+(edie-widget-define desktop-list
+  :hook edie-wm-desktop-focus-changed-hook
 
-(cl-defmethod edie-widget-render ((widget (head desktop-list)))
-  ""
-  (declare (edie-log nil))
+  :state
+  (lambda (_ _)
+    (let ((monitors (edie-wm-monitor-list))
+          (windows (edie-wm-window-list)))
+      (mapcar (lambda (desktop)
+                (or
+                 (and (seq-find (lambda (mon)
+                              (equal (edie-wm-property mon 'focused-desktop)
+                                     (edie-wm-property desktop 'id)))
+                                monitors)
+                      1)
+                 (and (seq-find (lambda (wnd)
+                              (equal (edie-wm-property wnd 'desktop)
+                                     (edie-wm-property desktop 'id)))
+                                windows)
+                      t)))
+              (edie-wm-desktop-list))))
 
-  (edie-widget-add-update-hook 'edie-wm-desktop-focus-changed-hook)
-
-  (let ((desktop-id (edie-wm-property (edie-wm-current-desktop) 'id))
-        used-desktops)
-    (dolist (w (edie-wm-window-list))
-      (cl-pushnew (edie-wm-property w 'desktop) used-desktops))
-
-    `(box ((spacing . ,(or (dom-attr widget 'spacing) 8)))
-          ,@(mapcar (lambda (d)
-                      `(icon ((name . ,(dom-attr widget 'icon))
-                              (size . ,(dom-attr widget 'icon-size))
+  :render
+  (pcase-lambda ((map spacing icon icon-size) desktops)
+    `(box ((spacing . ,(or spacing 8)))
+          ,@(mapcar (lambda (dsk)
+                      `(icon ((name . ,icon)
+                              (size . ,icon-size)
                               (color . ,(cond
-                                         ((equal desktop-id (edie-wm-property d 'id))
-                                          edie-bar-desktop-list-icon-color-active)
-                                         ((member (edie-wm-property d 'id) used-desktops)
-                                          edie-bar-desktop-list-icon-color-used))))))
-                      (edie-wm-desktop-list)))))
+                                         ((eq dsk t)
+                                          edie-bar-desktop-list-icon-color-used)
+                                         ((numberp dsk)
+                                          edie-bar-desktop-list-icon-color-active))))))
+                    desktops))))
 
 (provide 'edie-bar-desktop-list)
 ;;; edie-bar-desktop-list.el ends here

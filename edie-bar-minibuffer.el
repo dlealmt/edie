@@ -101,7 +101,11 @@ Setup minibuffer and forward ARGS."
             (to (+ 1 i begin)))
         (unless (get-text-property from 'display)
           (put-text-property from to 'invisible t)
-          (edie-widget-put-image `(text nil ,(buffer-substring from to)) from to))))))
+          (edie-widget-put-image
+           `(box ((height . 96))
+              (box ((height . 48) (y . 48))
+                 (text nil ,(buffer-substring from to))))
+            from to))))))
 
 (provide 'edie-bar-minibuffer)
 ;;; edie-bar-minibuffer.el ends here

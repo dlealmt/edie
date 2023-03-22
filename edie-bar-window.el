@@ -28,17 +28,18 @@
 
 ;;; Code:
 
-(cl-defmethod edie-widget-render ((_ (head window)))
-  ""
-  (declare (edie-log nil))
-  (edie-widget-add-update-hook 'edie-wm-window-focus-changed-hook
-                               'edie-wm-window-updated-hook
-                               'edie-wm-window-closed-hook)
+(edie-widget-define window
+  :hook edie-wm-window-focus-changed-hook
 
-  `(box nil
-     (text nil ,(if-let ((window (edie-wm-current-window)))
-                    (edie-wm-property window 'title)
-                  ""))))
+  :state
+  (lambda (_ _)
+    (when-let ((window (edie-wm-current-window)))
+      (edie-wm-property window 'title)))
+
+  :render
+  (pcase-lambda (_ title)
+    `(box nil
+       (text nil ,(or title "")))))
 
 (provide 'edie-bar-window)
 ;;; edie-bar-window.el ends here

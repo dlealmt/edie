@@ -57,10 +57,10 @@
   (pcase event
     ((rx "activewindowv2>>,")
      (edie-wm-on-window-focus nil))
-    ((rx "activewindowv2>>")
-     (edie-wm-on-window-focus nil))
-    ((rx "openwindow>>")
-     (edie-wm-on-window-add nil))
+    ((rx "activewindowv2>>" (let wid (+ hex)))
+     (edie-wm-on-window-focus wid))
+    ((rx "openwindow>>" (let wid (+ hex)))
+     (edie-wm-on-window-add wid))
     ((rx "movewindow>>")
      (edie-wm-on-window-update nil nil))
     ((rx "closewindow>>")
@@ -145,9 +145,16 @@
   (edie-wm-hypr--write 'workspace (edie-wm-property desktop 'id)))
 
 (defun edie-wm-backend-desktop-list ()
-  (mapcar (lambda (dsk)
-            (cons 'desktop dsk))
-          (edie-wm-hypr--read-json 'workspaces)))
+  (let ((desktops (number-sequence 1 edie-wm-desktops))
+        (instances (edie-wm-hypr--read-json 'workspaces)))
+    (mapcar (lambda (dsk)
+              (cons 'desktop
+                    (if-let ((found (seq-find (lambda (inst)
+                                                (equal (alist-get 'id inst) dsk))
+                                              instances)))
+                        found
+                      (list (cons 'id dsk)))))
+            desktops)))
 
 (defun edie-wm-hypr--read (&rest args)
   (with-output-to-string

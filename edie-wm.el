@@ -238,15 +238,25 @@ switch to."
                (choice (completing-read "Desktop: " desktops)))
     (cdr (assq (intern choice) desktops))))
 
-(defun edie-wm-on-window-focus (_)
-  (declare (edie-log t))
-  (run-hooks 'edie-wm-window-focus-changed-hook))
+(defvar edie-wm--current-window nil)
 
-(defun edie-wm-on-window-add (_)
-  (declare (edie-log t))
-  (run-hooks 'edie-wm-window-added-hook))
+(defmacro edie-wm-with-current-window (window &rest body)
+  "Execute BODY with WINDOW as the current window."
+  (declare (indent defun) (edie-log t))
+  `(let ((edie-wm--current-window (edie-wm-window ,window)))
+     ,@body))
 
-(defun edie-wm-on-window-remove (_)
+(defun edie-wm-on-window-focus (wid)
+  (declare (edie-log t))
+  (edie-wm-with-current-window wid
+    (run-hooks 'edie-wm-window-focus-changed-hook)))
+
+(defun edie-wm-on-window-add (wid)
+  (declare (edie-log t))
+  (edie-wm-with-current-window wid
+    (run-hooks 'edie-wm-window-added-hook)))
+
+ (defun edie-wm-on-window-remove (_)
   (declare (edie-log t))
   (run-hooks 'edie-wm-window-closed-hook))
 
@@ -298,12 +308,14 @@ switch to."
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
   (declare (edie-log nil))
-  (edie-wm-backend-current-window))
+  (or edie-wm--current-window
+      (edie-wm-backend-current-window)))
 
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
   (declare (edie-log nil))
-  (car (edie-wm-window-list filters)))
+  (car (edie-wm-window-list (or (and (listp filters) filters) (list (cons 'id filters))))))
+
 
 (defun edie-wm-window-list (&optional filters)
   "The list of windows across all desktops."

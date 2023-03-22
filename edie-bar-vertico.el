@@ -72,9 +72,9 @@
                             (substring-no-properties candidates-string)
                             `(box ((pad-x . 24) (height . 96) (width . 1.0))
                                (box ((y . 48) (width . 1.0) (height . 48))
-                              ,@(let ((elts nil))
-                                  (dolist (c candidates (nreverse elts))
-                                    (push (funcall edie-bar-vertico-spec c) elts)))))))))))
+                                  ,@(let ((elts nil))
+                                      (dolist (c candidates (nreverse elts))
+                                        (push (funcall edie-bar-vertico-spec c) elts)))))))))))
 
 (defun edie-bar-vertico--arrange-candidates ()
   "Arrange candidates."
