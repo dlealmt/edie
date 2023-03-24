@@ -240,20 +240,20 @@ switch to."
 
 (defvar edie-wm--current-window nil)
 
-(defmacro edie-wm-with-current-window (window &rest body)
+(defmacro edie-wm-with-current-window (&rest body)
   "Execute BODY with WINDOW as the current window."
-  (declare (indent defun) (edie-log t))
-  `(let ((edie-wm--current-window (edie-wm-window ,window)))
+  (declare (indent defun))
+  `(let ((edie-wm--current-window (edie-wm-backend-current-window)))
      ,@body))
 
-(defun edie-wm-on-window-focus (wid)
+(defun edie-wm-on-window-focus (_)
   (declare (edie-log t))
-  (edie-wm-with-current-window wid
+  (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-focus-changed-hook)))
 
-(defun edie-wm-on-window-add (wid)
+(defun edie-wm-on-window-add (_)
   (declare (edie-log t))
-  (edie-wm-with-current-window wid
+  (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-added-hook)))
 
  (defun edie-wm-on-window-remove (_)
@@ -262,7 +262,8 @@ switch to."
 
 (defun edie-wm-on-window-update (_ _)
   (declare (edie-log t))
-  (run-hooks 'edie-wm-window-updated-hook))
+  (edie-wm-with-current-window
+    (run-hooks 'edie-wm-window-updated-hook)))
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
