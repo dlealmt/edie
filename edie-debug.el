@@ -86,31 +86,31 @@
         (set-marker-insertion-type marker t))
       marker)))
 
-(defun edie-debug--log (fname arglist fn args)
+(defun edie-debug (tag sexp)
   (let* ((marker (edie-debug--log-buffer-marker))
          (time (format-time-string "\"[%H:%M:%S:%3N]\""))
-         (edie-debug--log-depth (or (and edie-debug--log-depth (1+ edie-debug--log-depth)) 0))
-         (lst (if-let ((lst (seq-mapn #'list arglist args)))
-                  lst
-                (list "()")))
-         result)
+         (edie-debug--log-depth (or (and edie-debug--log-depth (1+ edie-debug--log-depth)) 0)))
     (with-current-buffer (edie-debug--log-buffer)
       (goto-char marker)
-
       (let ((inhibit-read-only t))
         (unwind-protect
             (progn
               (insert
                (format "%s%s"
                        (make-string (* 2 edie-debug--log-depth) ?\ )
-                       (append (list fname time) lst)))
-              (newline)
-              (setq result (apply fn args)))
-          (insert (format "%s%s"
-                          (make-string (* 2 edie-debug--log-depth) ?\ )
-                          (append (list fname time) lst (list '=> result))))
-          (set-marker marker (point))
-          (newline))))
+                       (append (list tag time) sexp)))
+              (newline))
+          (set-marker marker (point)))))))
+
+(defun edie-debug--log (fname arglist fn args)
+  (let* ((lst (if-let ((lst (seq-mapn #'list arglist args)))
+                  lst
+                (list "()")))
+         result)
+    (edie-debug fname lst)
+    (unwind-protect
+        (setq result (apply fn args))
+      (edie-debug fname (append lst (list '=> result))))
     result))
 
 (defun edie-debug--log-function (fname arglist fn args)
