@@ -56,18 +56,6 @@
     (let ((inhibit-read-only t))
       (erase-buffer))))
 
-(defun edie-debug-state ()
-  (interactive)
-  (pp-display-expression
-   `((current-monitor . ,(edie-wm-current-monitor))
-     (current-desktop . ,(edie-wm-current-desktop))
-     (current-window . ,(edie-wm-current-window))
-     (monitors . ,(edie-wm-monitor-list))
-     (desktops . ,(edie-wm-desktop-list))
-     (windows . ,(edie-wm-window-list)))
-   "*edie-state*"
-   t))
-
 (defun edie-debug--log-buffer ()
   (if-let ((buffer (get-buffer "*edie-debug*")))
       buffer
