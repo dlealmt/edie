@@ -124,10 +124,9 @@
       (edie-wm-hypr--write 'movewindow monitor))))
 
 (defun edie-wm-hypr--current-monitor ()
-  (cons 'monitor
-        (seq-filter (lambda (mon)
-                      (edie-wm-property mon 'focused))
-                    (edie-wm-backend-monitor-list))))
+  (seq-find (lambda (mon)
+              (edie-wm-property mon 'focused))
+            (edie-wm-backend-monitor-list)))
 
 (defun edie-wm-backend-monitor-list ()
   (let (monitors monitor)
@@ -144,16 +143,20 @@
 (defun edie-wm-backend-desktop-focus (desktop)
   (edie-wm-hypr--write 'workspace (edie-wm-property desktop 'id)))
 
-(defun edie-wm-backend-desktop-list ()
-  (let ((desktops (number-sequence 1 edie-wm-desktops))
-        (instances (edie-wm-hypr--read-json 'workspaces)))
+(defun edie-wm-backend-desktop-list (&optional monitor)
+  (let* ((monitor (or monitor (edie-wm-hypr--current-monitor)))
+         (first-desktop (1+ (* (edie-wm-property monitor 'id) 100)))
+         (desktops (number-sequence first-desktop (+ first-desktop (1- edie-wm-desktops))))
+         (instances (seq-filter (lambda (dsk)
+                                  (string= (edie-wm-property dsk 'monitor)
+                                           (edie-wm-property monitor 'name)))
+                                (edie-wm-hypr--read-json 'workspaces))))
     (mapcar (lambda (dsk)
               (cons 'desktop
-                    (if-let ((found (seq-find (lambda (inst)
-                                                (equal (alist-get 'id inst) dsk))
-                                              instances)))
-                        found
-                      (list (cons 'id dsk)))))
+                    (or (seq-find (lambda (inst)
+                                    (equal (alist-get 'id inst) dsk))
+                                  instances)
+                        (list (cons 'id dsk)))))
             desktops)))
 
 (defun edie-wm-hypr--read (&rest args)
