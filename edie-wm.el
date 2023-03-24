@@ -504,7 +504,9 @@ Return nil or the list of windows that match the filters."
   (declare (edie-log t))
   (when-let ((window (edie-wm-current-window)))
     (let* ((new-props nil)
-           (rules (edie-wm-find-rule window))
+           (rules (cdr (seq-find (pcase-lambda (`(,filter . ,_))
+                                   (edie-wm-window-filter-match-p filter window))
+                                 edie-wm-rules-alist)))
            result)
       (dolist (fun edie-wm-window-rules-functions)
         (setq result (funcall fun rules window))
@@ -513,12 +515,6 @@ Return nil or the list of windows that match the filters."
 
       (when new-props
         (edie-wm-update-window window new-props)))))
-
-(defun edie-wm-find-rule (window)
-  (declare (edie-log t))
-  (cdr (seq-find (pcase-lambda (`(,filter . ,_))
-                   (edie-wm-window-filter-match-p filter window))
-                 edie-wm-rules-alist)))
 
 (defun edie-wm-tile--gen-commands (tiles)
   (dolist (tile tiles)
