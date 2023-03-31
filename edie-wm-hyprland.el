@@ -127,7 +127,7 @@
 
 (defun edie-wm-backend-monitor-focus (monitor)
   (declare (edie-log nil))
-  (edie-wm-hypr--write 'focusmonitor (format "id:%s" (edie-wm-property monitor 'id))))
+  (edie-wm-hypr--write 'focusmonitor (edie-wm-property monitor 'id)))
 
 (defun edie-wm-hypr--current-monitor ()
   (seq-find (lambda (mon)
