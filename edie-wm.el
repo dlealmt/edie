@@ -238,9 +238,10 @@ switch to."
 When called interactively, prompt for the desktop we want to
 switch to."
   (declare (edie-log t))
+  (when (memq direction '(left right))
   (let ((desktop (edie-wm-current-desktop)))
     (edie-wm-backend-desktop-focus 'create (edie-wm-property desktop 'monitor))
-    (edie-wm-current-desktop)))
+    (edie-wm-current-desktop))))
 
 (defun edie-wm-desktop-list (&optional filters)
   "The list of virtual desktops."
@@ -330,62 +331,77 @@ switch to."
   (let* ((desktop-id (edie-wm-property window 'desktop)))
     (edie-wm-desktop desktop-id)))
 
-(defun edie-wm-window-in-direction (direction window)
-  (let* ((desktop (edie-wm-window-desktop window))
-         (windows (edie-wm-window-list desktop)))
-    (seq-find (lambda (w)
-                (pcase direction
-                  ('left
-                   (< (edie-wm-left w) (edie-wm-left window)))
-                  ('right
-                   (< (edie-wm-right window) (edie-wm-right w)))
-                  ('up
-                   (< (edie-wm-top window) (edie-wm-top w)))
-                  ('down
-                   (< (edie-wm-bottom w) (edie-wm-bottom window)))))
-              windows)))
-
 (defcustom edie-wm-focus-direction-try-functions
   '(edie-wm-focus-direction-try-window
     edie-wm-focus-direction-try-monitor
-    edie-wm-focus-direction-try-desktop)
-  "List of functions to try when focusing in a direction.")
+    edie-wm-focus-direction-try-desktop
+    edie-wm-focus-direction-try-desktop-create)
+  "List of functions to try when focusing in a direction."
+  :type '(repeat function))
 
 (defun edie-wm-focus-direction (direction)
   (catch 'focused
-  (dolist (fun edie-wm-focus-direction-try-functions)
-    (when-let ((thing (funcall fun direction)))
-      (throw 'focused thing)))))
+    (dolist (fun edie-wm-focus-direction-try-functions)
+      (when-let ((thing (funcall fun direction)))
+        (throw 'focused thing)))))
 
-(defun edie-wm-focus-direction-try-desktop (direction &optional desktop)
-  (when-let ((desktop (or desktop (edie-wm-current-desktop)))
-           (new-desktop (edie-wm-desktop-in-direction direction desktop)))
-      (edie-wm-desktop-switch new-desktop)))
+(defun edie-wm-focus-direction-try-window (direction)
+  (declare (edie-log t))
+  (when-let ((new (edie-wm-window-in-direction direction)))
+    (edie-wm-window-focus new)))
 
-(defun edie-wm-focus-direction-try-window (direction &optional window)
-  (when-let ((window (or window (edie-wm-current-window)))
-           (new-window (edie-wm-window-in-direction direction window)))
-      (edie-wm-window-focus new-window)))
+(defun edie-wm-focus-direction-try-desktop (direction)
+  (declare (edie-log t))
+  (when-let ((new (edie-wm-desktop-in-direction direction)))
+    (edie-wm-desktop-switch new)))
 
-(defun edie-wm-focus-direction-try-monitor (direction &optional monitor)
-  (when-let ((monitor (or monitor (edie-wm-current-monitor)))
-             (new-monitor (edie-wm-monitor-in-direction direction monitor)))
-    (edie-wm-monitor-focus new-monitor)))
+(defun edie-wm-focus-direction-try-desktop-create (direction)
+  (declare (edie-log t))
+  (edie-wm-desktop-create-switch direction))
+
+(defun edie-wm-focus-direction-try-monitor (direction)
+  (declare (edie-log t))
+  (when-let ((new (edie-wm-monitor-in-direction direction)))
+    (edie-wm-monitor-focus new)))
 
 (defun edie-wm-monitor-focus (monitor)
   (edie-wm-backend-monitor-focus monitor)
   monitor)
 
-(defun edie-wm-desktop-in-direction (direction &optional desktop)
-  (let* ((desktop (or desktop (edie-wm-current-desktop)))
-         (monitor (edie-wm-monitor (edie-wm-property desktop 'monitor)))
-         (desktops (edie-wm-desktop-list monitor))
-         (desktop-pos (seq-position desktops desktop)))
-    (pcase direction
-      ('left
-       (nth (1- desktop-pos) desktops ))
-      ('right
-       (nth (1+ desktop-pos) desktops )))))
+(defun edie-wm-window-in-direction (direction)
+  (when-let ((window (edie-wm-current-window)))
+    (let* ((desktop (edie-wm-window-desktop window))
+           (windows (edie-wm-window-list desktop)))
+      (seq-find (lambda (wnd)
+                  (pcase direction
+                    ('left (edie-wm-left-of-p wnd window t))
+                    ('right (edie-wm-right-of-p wnd window t))
+                    ('up (edie-wm-above-p wnd window t))
+                    ('down (edie-wm-below-p wnd window t))))
+                windows))))
+
+(defun edie-wm-desktop-in-direction (direction)
+  (when (memq direction '(left right))
+    (let* ((desktop (edie-wm-current-desktop))
+           (monitor (edie-wm-monitor (edie-wm-property desktop 'monitor)))
+           (desktops (edie-wm-desktop-list monitor))
+           (desktop-pos (seq-position desktops desktop)))
+      (pcase direction
+        ('left
+         (nth (1- desktop-pos) desktops))
+        ('right
+         (nth (1+ desktop-pos) desktops))))))
+
+(defun edie-wm-monitor-in-direction (direction)
+  (when (> (length (edie-wm-monitor-list)) 1)
+    (let ((monitor (edie-wm-current-monitor)))
+      (seq-find (lambda (mon)
+                  (pcase direction
+                    ('left (edie-wm-left-of-p mon monitor))
+                    ('right (edie-wm-right-of-p mon monitor))
+                    ('up (edie-wm-above-p mon monitor))
+                    ('down (edie-wm-below-p mon monitor))))
+                (edie-wm-monitor-list)))))
 
 (defun edie-wm-select-window ()
   "Prompt for a window."
@@ -548,21 +564,20 @@ Return nil or the list of windows that match the filters."
                                  (equal val (edie-wm-property mon prop)))
                                filters))
                 monitors)))
+
+(defun edie-wm-above-p (target reference &optional allow-overlap)
+  (< (if allow-overlap (edie-wm-top target) (edie-wm-bottom target))
+     (edie-wm-top reference)))
 
-(defun edie-wm-monitor-in-direction (direction &optional monitor)
-  (let* ((monitor (or monitor (edie-wm-current-monitor)))
-         (monitors (edie-wm-monitor-list)))
-    (seq-find (lambda (mon)
-                (pcase direction
-                  ('left
-                   (< (edie-wm-left mon) (edie-wm-left monitor)))
-                  ('right
-                   (< (edie-wm-right monitor) (edie-wm-right mon)))
-                  ('up
-                   (< (edie-wm-top mon) (edie-wm-top monitor)))
-                 ('down
-                   (< (edie-wm-bottom monitor) (edie-wm-bottom mon))) ))
-              monitors)))
+(defun edie-wm-below-p (target reference &optional allow-overlap)
+  (edie-wm-above-p reference target allow-overlap))
+
+(defun edie-wm-left-of-p (target reference &optional allow-overlap)
+  (< (if allow-overlap (edie-wm-left target) (edie-wm-right target))
+     (edie-wm-left reference)))
+
+(defun edie-wm-right-of-p (target reference &optional allow-overlap)
+  (edie-wm-left-of-p reference target allow-overlap))
 
 (defun edie-wm-on-monitor-add (_)
   (declare (edie-log t))
