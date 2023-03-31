@@ -48,8 +48,22 @@
     (funcall battery-status-function))
 
   :render
-  (pcase-lambda ((and props (map format icon)) status)
-    `(text nil "")))
+  (lambda (attributes state)
+    (pcase-let* (((map format) attributes)
+                 ((map (?p (app string-to-number charge))
+                       (?B (or (and "fully-charged" full)
+                               (and "charging" charging)
+                               (and "discharging" discharging))))
+                  state)
+                 (icon (cond
+                        (full
+                         "battery-charging")
+                        ((or charging discharging)
+                         (format "battery-%d" (- charge (% charge 10)))))))
+      `(box ,attributes
+         (icon ((name . ,icon)))
+         ,(unless full
+            `(text nil ,(format-spec (or format edie-bar-battery-format) state)))))))
 
 (provide 'edie-bar-battery)
 ;;; edie-bar-battery.el ends here

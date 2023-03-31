@@ -116,9 +116,21 @@ will be applied to windows matched by FILTERS."
                  (alist :key-type (alist :key-type symbol :value-type sexp)
                         :value-type (alist :key-type symbol :value-type sexp))))
 
-(defcustom edie-wm-backend 'openbox
+(defcustom edie-wm-backend 'hyprland
   nil
-  :type '(choice (const openbox) (const hyprland)))
+  :type '(choice (const hyprland)))
+
+(defcustom edie-wm-max-desktops-per-monitor 1024
+  "The maximum number of virtual desktops per monitor."
+  :type 'natnum)
+
+(defcustom edie-wm-monitors 2
+  "The number of monitors for which to generate switch/move commands."
+  :type 'natnum)
+
+(defcustom edie-wm-desktops 8
+  "The number of desktops, per monitor, for which to generate switch/move commands."
+  :type 'natnum)
 
 ;;;###autoload
 (define-minor-mode edie-wm-mode
@@ -169,63 +181,88 @@ will be applied to windows matched by FILTERS."
         (dolist (prop properties (nreverse props))
           (push (cons prop (edie-wm-property obj prop)) props)))
     (cdr obj)))
-
-(defun edie-wm-desktop--gen-commands (num-desktops)
-  (dotimes (i num-desktops)
-    (defalias (intern (format "edie-wm-switch-to-desktop-%s" i))
-      (lambda ()
-        (interactive)
-        (edie-wm-switch-to-desktop (nth i (edie-wm-desktop-list)))))
-    (defalias (intern (format "edie-wm-window-to-desktop-%s" i))
-      (lambda ()
-        (interactive)
-        (edie-wm-window-to-desktop (nth i (edie-wm-desktop-list)))))))
 
-(defcustom edie-wm-desktops 5
-  "The number of known desktops."
-  :type 'natnum
-  :set (lambda (symbol value)
-         (set-default symbol value)
-         (edie-wm-desktop--gen-commands value)))
+(defun edie-wm-id (obj)
+  (edie-wm-property obj 'id))
+
+(defun edie-wm-title (obj)
+  (edie-wm-property obj 'title))
+
+(defun edie-wm-left (obj)
+  (edie-wm-property obj 'left))
+
+(defun edie-wm-right (obj)
+  (+ (edie-wm-property obj 'left) (edie-wm-property obj 'width)))
+
+(defun edie-wm-top (obj)
+  (edie-wm-property obj 'top))
+
+(defun edie-wm-bottom (obj)
+  (+ (edie-wm-property obj 'height) (edie-wm-property obj 'top)))
 
 (defun edie-wm-on-desktop-focus-change (_)
   (declare (edie-log t))
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
-(defun edie-wm-desktop-make ()
+(defun edie-wm-desktop-make (properties)
   "Create a new desktop."
-  (list 'desktop))
+  (cons 'desktop properties))
 
 (defun edie-wm-desktop (filters)
   "Return the desktop named NAME."
   (declare (edie-log nil))
-  (catch 'found
-    (dolist (dsk (edie-wm-desktop-list))
-      (or (catch 'not-found
-            (pcase-dolist (`(,key . ,value) filters)
-              (or (equal (edie-wm-property dsk key) value)
-                  (throw 'not-found t))))
-          (throw 'found dsk)))))
+  (car (edie-wm-desktop-list filters)))
 
-(defun edie-wm-current-desktop ()
+(defun edie-wm-current-desktop (&optional monitor)
   "The desktop we are currently working in."
   (declare (edie-log nil))
-  (let ((id (edie-wm-property (edie-wm-current-monitor) 'focused-desktop)))
-    (edie-wm-desktop `((id . ,id)))))
+  (let* ((monitor (or monitor (edie-wm-current-monitor)))
+        (id (edie-wm-property monitor 'focused-desktop)))
+    (edie-wm-desktop id)))
 
-(defun edie-wm-switch-to-desktop (desktop)
+(defun edie-wm-desktop-switch (desktop)
   "Switch to desktop DESKTOP.
 
 When called interactively, prompt for the desktop we want to
 switch to."
   (declare (edie-log t))
-  (interactive (list (edie-wm-select-desktop)))
-  (edie-wm-backend-desktop-focus desktop))
+  (when (natnump desktop)
+    (setq desktop (edie-wm-desktop desktop)))
+  (edie-wm-backend-desktop-focus (edie-wm-property desktop 'id)
+                                 (edie-wm-property desktop 'monitor))
+  desktop)
 
-(defun edie-wm-desktop-list ()
+(defun edie-wm-desktop-create-switch (direction)
+  "Switch to desktop DESKTOP.
+
+When called interactively, prompt for the desktop we want to
+switch to."
+  (declare (edie-log t))
+  (let ((desktop (edie-wm-current-desktop)))
+    (edie-wm-backend-desktop-focus 'crete (edie-wm-property desktop 'monitor))
+    (edie-wm-current-desktop)))
+
+(defun edie-wm-desktop-list (&optional filters)
   "The list of virtual desktops."
   (declare (edie-log nil))
-  (edie-wm-backend-desktop-list))
+  (let ((desktops (edie-wm-backend-desktop-list)))
+    (pcase filters
+      ((pred natnump)
+       (setq filters `((id . ,filters))))
+      ((seq 'monitor &rest (map id))
+       (setq filters `((monitor . ,(edie-wm-property filters 'id))))))
+    (if filters
+        (seq-filter
+         (lambda (dsk)
+           (map-every-p
+            (lambda (prop val)
+              (equal val (edie-wm-property dsk prop)))
+            filters))
+         desktops)
+      desktops)))
+
+(defun edie-wm-desktop-in-monitor-p (desktop monitor)
+  (= (edie-wm-property desktop 'monitor) (edie-wm-property monitor 'id)))
 
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
@@ -267,8 +304,91 @@ switch to."
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
-  (declare (edie-log t))
-  (edie-wm-backend-window-focus window))
+  (declare (edie-log nil))
+  (edie-wm-backend-window-focus window)
+  window)
+
+(defalias 'edie-wm-window-focus 'edie-wm-focus-window)
+
+(defun edie-wm-focus-left ()
+  (interactive)
+  (edie-wm-focus-direction 'left))
+
+(defun edie-wm-focus-right ()
+  (interactive)
+  (edie-wm-focus-direction 'right))
+
+(defun edie-wm-focus-up ()
+  (interactive)
+  (edie-wm-focus-direction 'up))
+
+(defun edie-wm-focus-down ()
+  (interactive)
+  (edie-wm-focus-direction 'down))
+
+(defun edie-wm-window-desktop (window)
+  (let* ((desktop-id (edie-wm-property window 'desktop)))
+    (edie-wm-desktop desktop-id)))
+
+(defun edie-wm-window-in-direction (direction window)
+  (let* ((desktop (edie-wm-window-desktop window))
+         (windows (edie-wm-window-list desktop)))
+    (seq-find (lambda (w)
+                (pcase direction
+                  ('left
+                   (< (edie-wm-left w) (edie-wm-left window)))
+                  ('right
+                   (< (edie-wm-right window) (edie-wm-right w)))
+                  ('up
+                   (< (edie-wm-top window) (edie-wm-top w)))
+                  ('down
+                   (< (edie-wm-bottom w) (edie-wm-bottom window)))))
+              windows)))
+
+(defun edie-wm-focus-direction (direction &optional thing)
+  (let ((thing (or thing (edie-wm-window-current))))
+    (pcase thing
+      ((seq 'window)
+       (or (edie-wm-window-focus-direction direction thing)
+           (edie-wm-focus-direction (edie-wm-window-desktop thing))))
+      ((seq 'monitor)
+       (edie-wm-monitor-focus-direction direction thing))
+      ((or (pred null) (seq 'desktop))
+       (and (memq direction '(left right))
+            (edie-wm-desktop-focus-direction direction thing))))))
+
+(defun edie-wm-desktop-focus-direction (direction &optional desktop)
+  (if-let ((desktop (or desktop (edie-wm-current-desktop)))
+           (new-desktop (edie-wm-desktop-in-direction direction desktop)))
+      (edie-wm-desktop-switch new-desktop)
+    (when (not (edie-wm-monitor-focus-direction direction))
+      (edie-wm-desktop-create-switch direction))))
+
+(defun edie-wm-window-focus-direction (direction &optional window)
+  (if-let ((window (or window (edie-wm-current-window)))
+           (new-window (edie-wm-window-in-direction direction window)))
+      (edie-wm-window-focus new-window)
+    (edie-wm-desktop-focus-direction direction)))
+
+(defun edie-wm-monitor-focus-direction (direction &optional monitor)
+  (when-let ((monitor (or monitor (edie-wm-current-monitor)))
+             (new-monitor (edie-wm-monitor-in-direction direction monitor)))
+    (edie-wm-monitor-focus new-monitor)))
+
+(defun edie-wm-monitor-focus (monitor)
+  (edie-wm-backend-monitor-focus monitor)
+  monitor)
+
+(defun edie-wm-desktop-in-direction (direction &optional desktop)
+  (let* ((desktop (or desktop (edie-wm-current-desktop)))
+         (monitor (edie-wm-monitor (edie-wm-property desktop 'monitor)))
+         (desktops (edie-wm-desktop-list monitor))
+         (desktop-pos (seq-position desktops desktop)))
+    (pcase direction
+      ('left
+       (nth (1- desktop-pos) desktops ))
+      ('right
+       (nth (1+ desktop-pos) desktops )))))
 
 (defun edie-wm-select-window ()
   "Prompt for a window."
@@ -309,21 +429,28 @@ switch to."
 (defun edie-wm-current-window ()
   "Return the window that is currently focused."
   (declare (edie-log nil))
-  (or edie-wm--current-window
-      (edie-wm-backend-current-window)))
+  (or edie-wm--current-window (edie-wm-backend-current-window)))
+
+(defalias 'edie-wm-window-current #'edie-wm-current-window)
 
 (defun edie-wm-window (filters)
   "Return the first window that matches FILTERS."
   (declare (edie-log nil))
   (car (edie-wm-window-list (or (and (listp filters) filters) (list (cons 'id filters))))))
 
-
 (defun edie-wm-window-list (&optional filters)
   "The list of windows across all desktops."
   (declare (edie-log nil))
-  (if filters
-      (edie-wm-window-filter-list filters (edie-wm-backend-window-list))
-    (edie-wm-backend-window-list)))
+  (let* ((all-windows (edie-wm-backend-window-list))
+         (windows (pcase filters
+                    ((seq 'desktop &rest (map id))
+                     (edie-wm-window-filter-list `((desktop . ,id)) all-windows))
+                    ((and (pred listp) (seq (pred consp)))
+                     (edie-wm-window-filter-list filters all-windows))
+                    (_
+                     all-windows))))
+    ;; TODO This needs to be moved to a hook
+    (seq-remove (lambda (w) (equal (edie-wm-title w) "_main-bar_")) windows)))
 
 (defun edie-wm-window-filter-list (filters &optional windows)
   "Return all windows matching FILTERS.
@@ -408,25 +535,48 @@ Return nil or the list of windows that match the filters."
   (declare (edie-log nil))
   (seq-find #'edie-wm-monitor-focused-p (edie-wm-monitor-list)))
 
-(defun edie-wm-monitor-list ()
+(defun edie-wm-monitor (filters)
+  "Return the first monitor that matches FILTERS."
   (declare (edie-log nil))
-  (edie-wm-backend-monitor-list))
+  (car (edie-wm-monitor-list filters)))
+
+(defun edie-wm-monitor-list (&optional filters)
+  (declare (edie-log nil))
+  (let ((monitors (edie-wm-backend-monitor-list)))
+    (pcase filters
+      ((pred natnump)
+       (setq filters `((id . ,filters)))))
+    (seq-filter (lambda (mon)
+                  (map-every-p (lambda (prop val)
+                                 (equal val (edie-wm-property mon prop)))
+                               filters))
+                monitors)))
+
+(defun edie-wm-monitor-in-direction (direction &optional monitor)
+  (let* ((monitor (or monitor (edie-wm-current-monitor)))
+         (monitors (edie-wm-monitor-list)))
+    (seq-find (lambda (mon)
+                (pcase direction
+                  ('left
+                   (< (edie-wm-left mon) (edie-wm-left monitor)))
+                  ('right
+                   (< (edie-wm-right monitor) (edie-wm-right mon)))
+                  ('up
+                   (< (edie-wm-top monitor) (edie-wm-top mon)))
+                 ('down
+                   (< (edie-wm-bottom monitor) (edie-wm-bottom mon))) ))
+              monitors)))
 
 (defun edie-wm-on-monitor-add (_)
   (declare (edie-log t))
   (run-hooks 'edie-wm-monitor-added-hook))
 
-(defun edie-wm-on-monitor-focus-change (name)
+(defun edie-wm-on-monitor-focus-change (_)
   (declare (edie-log t))
-  (dolist (mon (edie-wm-monitor-list))
-    (edie-wm-set-property
-     mon 'focused (equal (edie-wm-property mon 'name) name)))
   (run-hooks 'edie-wm-monitor-focus-changed-hook))
 
 (defun edie-wm-on-monitor-remove (_)
   (declare (edie-log t))
-  (edie-wm-monitor-reset-list)
-  (edie-wm-desktop-reset-list)
   (run-hooks 'edie-wm-monitor-removed-hook))
 
 (defun edie-wm-workarea ()
@@ -562,6 +712,13 @@ Return nil or the list of windows that match the filters."
                (window (car windows)))
           (edie-wm-focus-window window))
     (edie-wm-tile-focus-tile tile)))
+
+(defun edie-wm-tile-cycle (&optional tile)
+  (interactive)
+  (let ((tile (or tile (edie-wm-tile-current-tile))))
+    (when-let ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
+               (window (car (reverse windows)))
+      (edie-wm-focus-window window)))))
 
 (defun edie-wm-tile-focus-tile (tile)
   "Focus the topmost window of TILE."

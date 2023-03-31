@@ -62,19 +62,20 @@
 (defun edie-bar-vertico--display-candidates (candidates)
   "Display CANDIDATES horizontally."
   (with-selected-window (active-minibuffer-window)
-    (let* ((char-height (frame-char-height))
-           (height (/ (frame-pixel-height) (float char-height)))
-           (candidates-string (string-join candidates)))
-      (move-overlay vertico--candidates-ov (point-max) (point-max))
-      (overlay-put vertico--candidates-ov 'after-string
-                   (concat #(" " 0 1 (cursor t))
-                           (edie-widget-propertize
-                            (substring-no-properties candidates-string)
-                            `(box ((pad-x . 24) (height . 96) (width . 1.0))
-                               (box ((y . 48) (width . 1.0) (height . 48))
-                                  ,@(let ((elts nil))
-                                      (dolist (c candidates (nreverse elts))
-                                        (push (funcall edie-bar-vertico-spec c) elts)))))))))))
+    (with-selected-frame (window-frame)
+      (let* ((char-height (frame-char-height))
+             (height (/ (frame-pixel-height) (float char-height)))
+             (candidates-string (string-join candidates)))
+        (move-overlay vertico--candidates-ov (point-max) (point-max))
+        (overlay-put vertico--candidates-ov 'after-string
+                     (concat #(" " 0 1 (cursor t))
+                             (edie-widget-propertize
+                              (substring-no-properties candidates-string)
+                              `(box ((pad-x . 24) (height . 96) (width . 1.0))
+                                    (box ((y . 48) (width . 1.0) (height . 48))
+                                         ,@(let ((elts nil))
+                                             (dolist (c candidates (nreverse elts))
+                                               (push (funcall edie-bar-vertico-spec c) elts))))))))))))
 
 (defun edie-bar-vertico--arrange-candidates ()
   "Arrange candidates."

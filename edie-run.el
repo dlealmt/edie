@@ -47,12 +47,26 @@
   :group 'edie
   (if edie-run-mode
       (progn
-        (unless (frame-live-p edie-run--driver-frame)
-          (edie-run--ensure-driver-frame))
         (add-hook 'edie-wm-window-close-functions #'edie-run-window-close))
     (when (frame-live-p edie-run--driver-frame)
       (delete-frame edie-run--driver-frame))
-    (remove-hook 'edie-wm-window-close-functions #'edie-run--on-window-close)))
+    (remove-hook 'edie-wm-window-close-functions #'edie-run-window-close)))
+
+(defvar-keymap edie-run-frame-mode-map
+ :doc "Keymap for `edie-run-frame-mode'."
+  :parent special-mode-map
+  "f" '+edie-run)
+
+(define-derived-mode edie-run-frame-mode special-mode "Edie frame"
+  "Major mode for the edie-run driver frame."
+  :interactive nil
+  (setq buffer-read-only t)
+
+  (setq-local window-min-width 0)
+  (setq-local window-min-height 0)
+  (setq-local frame-alpha-lower-limit 0)
+
+  (hack-dir-local-variables-non-file-buffer))
 
 (defvar edie-run-frame-alist
   '((alpha . 20)
@@ -63,7 +77,6 @@
     (left . 0)
     (min-height . 0)
     (min-width . 0)
-    (no-accept-focus . t)
     (no-other-frame . t)
     (right-fringe . 0)
     (skip-taskbar . t)
@@ -82,7 +95,6 @@
     `(let* ((,prev-window (edie-wm-current-window))
             (,dir (with-current-buffer (current-buffer)
                     default-directory)))
-       (edie-run--ensure-driver-frame)
        (edie-wm-focus-window (edie-wm-window `((title . ,edie-run-proxy-frame-name))))
 
        (with-selected-frame edie-run--driver-frame
@@ -98,7 +110,7 @@
 
 (defun edie-run-once (filters command &rest command-args)
   ""
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (cl-pushnew filters edie-run-filter-list :test #'equal)
 
   (if-let ((window (edie-wm-window filters)))
@@ -106,6 +118,11 @@
                                       (focus . t)
                                       (desktop . ,(edie-wm-property (edie-wm-current-desktop) 'id))))
     (apply command command-args)))
+
+(defun edie-run-menu ()
+  (interactive)
+  (edie-run-with-global-context
+    (execute-kbd-macro (kbd "SPC"))))
 
 (defun edie-run--ensure-driver-frame ()
   "Make frame showing the input buffer."
@@ -126,11 +143,9 @@
   "Return the input buffer, creating it if it doesn't exist."
   (let* ((buffer (get-buffer-create "*edie-run*")))
     (with-current-buffer buffer
-      (read-only-mode t)
-      (setq-local window-min-width 0)
-      (setq-local window-min-height 0)
-      (setq-local frame-alpha-lower-limit 0)
-      buffer)))
+        (unless (eq major-mode 'edie-run-frame-mode)
+          (edie-run-frame-mode)))
+      buffer))
 
 (defun edie-run-window-close (window)
   (when (seq-find (lambda (filter)

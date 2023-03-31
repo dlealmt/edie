@@ -76,6 +76,7 @@ See `command-error-function.'"
 
 (cl-defun edie-bar-minibuffer-svg-prompt ((str &rest args))
   "Transform STR into an SVG image and pass it on, along with ARGS."
+  (declare (edie-log nil))
   (with-selected-frame default-minibuffer-frame
     (if (get-text-property 0 'display str)
         (cons str args)
@@ -87,15 +88,14 @@ See `command-error-function.'"
 
 Setup minibuffer and forward ARGS."
   (minibuffer-with-setup-hook
-      (lambda ()
-        (add-hook 'post-command-hook #'edie-bar-minibuffer--svg-input nil 'local))
+      (lambda () (add-hook 'post-command-hook #'edie-bar-minibuffer--svg-input nil 'local))
     (apply args)))
 
 (defun edie-bar-minibuffer--svg-input ()
   "Replace input with the corresponding SVG representation."
+  (declare (edie-log nil))
   (let* ((begin (minibuffer-prompt-end))
-         (count (1+ (- (buffer-size) begin)))
-         (end (+ begin count)))
+         (count (1+ (- (buffer-size) begin))))
     (dotimes (i count)
       (let ((from (+ i begin))
             (to (+ 1 i begin)))

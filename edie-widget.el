@@ -99,6 +99,7 @@
             svg))))))
 
 (defun edie-widget-propertize (string spec)
+  (declare (edie-log nil))
   (edie-widget-put-image spec 0 (length string) string))
 
 (defun edie-widget-put-image (spec from to &optional where)
@@ -341,7 +342,11 @@ to render the widget."
     "none")))
 
 (cl-defmethod edie-widget-render (((_ attributes &rest children) (head box)))
-  (nconc (list 'box attributes) (mapcar #'edie-widget-render children)))
+  (let (chlist)
+    (nconc (list 'box attributes)
+           (dolist (c children (nreverse chlist))
+             (when c
+               (push (edie-widget-render c) chlist))))))
 
 (cl-defmethod edie-widget-init ((box (head box)) frame)
   (dolist (child (dom-children box))
@@ -350,6 +355,7 @@ to render the widget."
 (cl-defmethod edie-widget-svg ((node (head box)))
   ""
   (let ((width (edie-widget-width node)))
+    (cl-assert (>= width 0))
     (edie-widget--make-svg-node
      `((width . ,width)
        (height . ,(edie-widget-height node))
@@ -453,8 +459,11 @@ to render the widget."
     svg))
 
 (defun edie-widget--face-attribute (faces attribute)
+  (declare (edie-log nil))
   (seq-let (face &rest ancestors) (append (ensure-list faces) '(default))
-    (face-attribute face attribute nil ancestors)))
+    (if face
+        (face-attribute face attribute nil ancestors)
+      (edie-widget--face-attribute ancestors attribute))))
 
 ;; string
 (cl-defmethod edie-widget-make ((str string))
@@ -512,7 +521,9 @@ to render the widget."
 
 (defun edie-widget--render-svg (spec)
   ""
-  (let ((edie-widget--dom `(frame ((frame . ,(selected-frame))) ,(copy-tree spec))))
+  (declare (edie-log nil))
+  (let ((edie-widget--dom `(frame ((frame . ,default-minibuffer-frame))
+                                  ,(copy-tree spec))))
     (edie-widget-svg edie-widget--dom)))
 
 (defun edie-widget--with-uuid (attributes)
