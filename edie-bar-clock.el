@@ -33,9 +33,6 @@
 (eval-when-compile
   (require 'edie-widget))
 
-(defconst edie-bar-clock--numbers
-  ["twelve" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine" "ten" "eleven"])
-
 (edie-widget-define clock
   :every 1
 
@@ -45,16 +42,10 @@
 
   :render
   (pcase-lambda ((and properties (map icon format)) _)
-    (let* ((icon-name (cond
-                       ((eq icon 'moving-clock)
-                        (let ((pos (% (decoded-time-hour (decode-time)) 12)))
-                          (format "clock-time-%s" (aref edie-bar-clock--numbers pos))))
-                       (icon
-                        (symbol-name icon)) )))
-      `(box ,properties
-         ,(when icon-name
-            `(icon ((name . ,icon-name))))
-         (text nil ,(format-time-string format))))))
+    `(box ,properties
+       ,(when icon
+          `(icon ((name . ,icon))))
+       (text nil ,(format-time-string format)))))
 
 (provide 'edie-bar-clock)
 ;;; edie-bar-clock.el ends here

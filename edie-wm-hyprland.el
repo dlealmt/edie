@@ -87,8 +87,10 @@
   (pcase-let* ((window (cons 'window props))
                ((map ('at `(,left ,top))
                      ('size `(,width ,height))
-                     ('workspace (map ('id desktop))))
+                     ('workspace (map ('id desktop)))
+                     address)
                 props))
+    (edie-wm-set-property window 'id address)
     (edie-wm-set-property window 'left left)
     (edie-wm-set-property window 'top top)
     (edie-wm-set-property window 'width width)
@@ -107,7 +109,7 @@
 
 (defun edie-wm-backend-window-focus (window)
   (declare (edie-log nil))
-  (edie-wm-hypr--write 'focuswindow (format "address:%s" (edie-wm-property window 'address))))
+  (edie-wm-hypr--write 'focuswindow (format "address:%s"(edie-wm-id window))))
 
 (defun edie-wm-backend-window-update (_ props)
   (declare (edie-log t))

@@ -51,18 +51,20 @@
   (lambda (attributes state)
     (pcase-let* (((map format) attributes)
                  ((map (?p (app string-to-number charge))
-                       (?B (or (and "fully-charged" full)
+                       (?B (or (and "fully-charged" fully-charged)
                                (and "charging" charging)
                                (and "discharging" discharging))))
                   state)
                  (icon (cond
-                        (full
-                         "battery-charging")
-                        ((or charging discharging)
-                         (format "battery-%d" (- charge (% charge 10)))))))
+                        (fully-charged
+                         "battery-full-charging")
+                        (charging
+                         (format "battery-%03d-charging" (- charge (% charge 10))))
+                        (discharging
+                         (format "battery-%03d" (- charge (% charge 10)))))))
       `(box ,attributes
          (icon ((name . ,icon)))
-         ,(unless full
+         ,(unless fully-charged
             `(text nil ,(format-spec (or format edie-bar-battery-format) state)))))))
 
 (provide 'edie-bar-battery)

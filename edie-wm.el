@@ -30,6 +30,8 @@
   (require 'subr-x)
   (require 'map))
 
+(require 'ring)
+
 (defvar edie-wm-window-close-functions nil)
 
 (defvar edie-wm--window-list nil)
@@ -142,6 +144,9 @@ will be applied to windows matched by FILTERS."
 
         (edie-wm-backend-start)
 
+        (add-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-focus-history-add)
+        (add-hook 'edie-wm-window-closed-hook #'edie-wm-window-focus-history-remove)
+
         (add-hook 'edie-wm-window-added-hook #'edie-wm-apply-rules)
         (add-hook 'edie-wm-window-updated-hook #'edie-wm-apply-rules)
         (add-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-raise)
@@ -149,6 +154,9 @@ will be applied to windows matched by FILTERS."
         (add-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close 95))
 
     (edie-wm-backend-stop)
+
+    (remove-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-focus-history-add)
+    (remove-hook 'edie-wm-window-closed-hook #'edie-wm-window-focus-history-remove)
 
     (remove-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close)
 
@@ -262,9 +270,6 @@ switch to."
          desktops)
       desktops)))
 
-(defun edie-wm-desktop-in-monitor-p (desktop monitor)
-  (= (edie-wm-property desktop 'monitor) (edie-wm-property monitor 'id)))
-
 (defun edie-wm-select-desktop ()
   "Prompt for a desktop."
   (pcase-let* ((desktop (edie-wm-current-desktop))
@@ -284,6 +289,10 @@ switch to."
   `(let ((edie-wm--current-window (edie-wm-backend-current-window)))
      ,@body))
 
+(defun edie-wm-window-desktop (window)
+  (let* ((desktop-id (edie-wm-property window 'desktop)))
+    (edie-wm-desktop desktop-id)))
+
 (defun edie-wm-on-window-focus (_)
   (declare (edie-log t))
   (edie-wm-with-current-window
@@ -302,6 +311,86 @@ switch to."
   (declare (edie-log t))
   (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-updated-hook)))
+
+(defcustom edie-wm-focus-cycle-try-functions
+  '(edie-wm-focus-cycle-try-tile
+    edie-wm-focus-cycle-try-desktop)
+  "List of functions to try when cycling focus."
+  :type '(repeat function))
+
+(defun edie-wm-focus-cycle-backward ()
+  (interactive)
+  (edie-wm-focus-cycle 'backward))
+
+(defun edie-wm-focus-cycle-forward ()
+  (interactive)
+  (edie-wm-focus-cycle 'forward))
+
+(defun edie-wm-focus-cycle (direction)
+  (interactive)
+  (edie-wm-window-focus
+   (car
+    (catch 'found
+      (dolist (fn edie-wm-focus-cycle-try-functions)
+        (when-let ((candidates (funcall fn)))
+          (throw 'found (pcase direction
+                          ('backward
+                           (nreverse candidates))
+                          ('forward
+                           (cdr candidates))))))))))
+
+(defvar edie-wm-window-focus-history nil
+  "List of windows we have focused.")
+
+(defun edie-wm-focus-cycle-try-tile ()
+  (when-let ((tile (edie-wm-tile-current-tile))
+             (windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile)))
+    (edie-wm-window-focus-history-list windows)))
+
+(defcustom edie-wm-window-focus-history-max-size 100
+  "Maximum number of windows to keep in the focus history."
+  :type 'integer)
+
+(defun edie-wm-window-focus-history-list (windows)
+  (mapcar
+   #'car
+   (sort
+    (mapcar (lambda (wnd)
+              (let* ((id (edie-wm-id wnd))
+                     (index (ring-member edie-wm-window-focus-history id)))
+                (cons wnd index)))
+            windows)
+    (lambda (a b) (< (cdr a) (cdr b))))))
+
+(defun edie-wm-window-focus-history-add ()
+  "Add the current window in the focus history."
+  (declare (edie-log nil))
+  (when-let ((window (edie-wm-current-window)))
+    (when (null edie-wm-window-focus-history)
+      (setq edie-wm-window-focus-history (make-ring edie-wm-window-focus-history-max-size)))
+
+    (when-let (((not (ring-empty-p edie-wm-window-focus-history)))
+               (index (ring-member edie-wm-window-focus-history (edie-wm-id window))))
+      (ring-remove edie-wm-window-focus-history index))
+      (ring-insert edie-wm-window-focus-history (edie-wm-id window))))
+
+(defun edie-wm-window-focus-history-remove ()
+  "Remove the current window from the focus history."
+  (when-let ((window (edie-wm-current-window))
+             (index (ring-member edie-wm-window-focus-history (edie-wm-id window))))
+    (ring-remove edie-wm-window-focus-history index)))
+
+(defcustom edie-wm-focus-direction-try-functions
+  '(edie-wm-focus-direction-try-window
+    edie-wm-focus-direction-try-monitor
+    edie-wm-focus-direction-try-desktop
+    edie-wm-focus-direction-try-desktop-create)
+  "List of functions to try when focusing in a direction."
+  :type '(repeat function))
+
+(defun edie-wm-window-p (object)
+  "Return t if OBJECT is a window."
+  (eq 'window (car-safe object)))
 
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
@@ -326,18 +415,6 @@ switch to."
 (defun edie-wm-focus-down ()
   (interactive)
   (edie-wm-focus-direction 'down))
-
-(defun edie-wm-window-desktop (window)
-  (let* ((desktop-id (edie-wm-property window 'desktop)))
-    (edie-wm-desktop desktop-id)))
-
-(defcustom edie-wm-focus-direction-try-functions
-  '(edie-wm-focus-direction-try-window
-    edie-wm-focus-direction-try-monitor
-    edie-wm-focus-direction-try-desktop
-    edie-wm-focus-direction-try-desktop-create)
-  "List of functions to try when focusing in a direction."
-  :type '(repeat function))
 
 (defun edie-wm-focus-direction (direction)
   (catch 'focused
@@ -715,29 +792,6 @@ Return nil or the list of windows that match the filters."
       (edie-wm-geometry (edie-wm-tile--spec tile)))
      (tiles
       (edie-wm-geometry (edie-wm-tile--spec (car tiles)))))))
-
-(defun edie-wm-tile-focus-cycle (tile)
-  "Cycle focus between windows in TILE."
-  (declare (edie-log t))
-  (if (eq (edie-wm-tile-current-tile) tile)
-      (if-let ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
-               (window (car windows)))
-          (edie-wm-focus-window window))
-    (edie-wm-tile-focus-tile tile)))
-
-(defun edie-wm-tile-cycle (&optional tile)
-  (interactive)
-  (let ((tile (or tile (edie-wm-tile-current-tile))))
-    (when-let ((windows (edie-wm-tile-window-list (edie-wm-current-desktop) tile))
-               (window (car (reverse windows)))
-      (edie-wm-focus-window window)))))
-
-(defun edie-wm-tile-focus-tile (tile)
-  "Focus the topmost window of TILE."
-  (declare (edie-log t))
-  (let* ((desktop (edie-wm-current-desktop)))
-    (when-let ((window (car (edie-wm-tile-window-list desktop tile))))
-      (edie-wm-focus-window window))))
 
 (defun edie-wm-tile-current-tile ()
   "Return the tile that the currently focused window is in."
