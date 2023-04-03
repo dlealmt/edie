@@ -31,7 +31,7 @@ Return nil if the file can't be found."
     (dolist (dir (edie-desktop-icon-theme-dirs))
       (when-let ((paths (directory-files-recursively
                          dir
-                         (format "%s.svg" name)
+                         (format "\\`%s.svg\\'" name)
                          nil
                          (lambda (d)
                            (or (string= (file-name-concat dir (file-name-nondirectory d)) d)
