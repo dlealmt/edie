@@ -531,16 +531,14 @@ switch to."
 (defun edie-wm-window-list (&optional filters)
   "The list of windows across all desktops."
   (declare (edie-log nil))
-  (let* ((all-windows (edie-wm-backend-window-list))
-         (windows (pcase filters
-                    ((seq 'desktop &rest (map id))
-                     (edie-wm-window-filter-list `((desktop . ,id)) all-windows))
-                    ((and (pred listp) (seq (pred consp)))
-                     (edie-wm-window-filter-list filters all-windows))
-                    (_
-                     all-windows))))
-    ;; TODO This needs to be moved to a hook
-    (seq-remove (lambda (w) (equal (edie-wm-title w) "_main-bar_")) windows)))
+  (let* ((all-windows (edie-wm-backend-window-list)))
+    (pcase filters
+      ((seq 'desktop &rest (map id))
+       (edie-wm-window-filter-list `((desktop . ,id)) all-windows))
+      ((and (pred listp) (seq (pred consp)))
+       (edie-wm-window-filter-list filters all-windows))
+      (_
+       all-windows))))
 
 (defun edie-wm-window-filter-list (filters &optional windows)
   "Return all windows matching FILTERS.
