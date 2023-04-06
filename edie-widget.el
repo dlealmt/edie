@@ -422,8 +422,10 @@ to render the widget."
     (while from
       (let* ((to (next-single-property-change from 'face string))
              (face (plist-get (text-properties-at from string) 'face))
-             (fg (edie-widget--color-hex (edie-widget--face-attribute face :foreground)))
-             (bg (edie-widget--color-hex (edie-widget--face-attribute face :background)))
+             (face-fg (edie-widget--face-attribute face :foreground))
+             (face-bg (edie-widget--face-attribute face :background))
+             (fg (and face-fg (edie-widget--color-hex face-fg)))
+             (bg (and face-bg (edie-widget--color-hex face-bg)))
              (family (edie-widget--face-attribute face :family))
              (weight (edie-widget--face-attribute face :weight))
              (substr (substring-no-properties string from to))
@@ -432,12 +434,16 @@ to render the widget."
                             (width . ,(* cwidth (length substr)))
                             (height . ,(edie-widget-height node)))
                           (list
-                           (dom-node 'rect `((width . "100%") (height . "100%") (fill . ,bg)))
-                           (dom-node 'text `(("xml:space" . "preserve")
-                                             (fill . ,fg)
-                                             (y . ,(edie-widget-y node))
-                                             (font-family . ,family)
-                                             (font-weight . ,weight))
+                           (when bg
+                             (dom-node 'rect `((width . "100%") (height . "100%") (fill . ,bg))))
+                           (dom-node 'text
+                                     (delq
+                                      nil
+                                      `(("xml:space" . "preserve")
+                                        ,(when fg `(fill . ,fg))
+                                        (y . ,(edie-widget-y node))
+                                        ,(when family `(font-family . ,family))
+                                        ,(when weight `(font-weight . ,weight))))
                                      (xml-escape-string substr))))))
         (dom-append-child svg svg-substr)
         (setq from to)))
@@ -448,16 +454,21 @@ to render the widget."
                               (dom-children)
                               (car)
                               (dom-attr 'fill))))
-                  (dom-node 'rect `((width . ,width) (height . "100%") (fill . ,fill))))))
-      (dom-add-child-before svg (pad-rect (dom-children svg) (* pad-x 2)))
-      (dom-add-child-before svg (pad-rect (reverse (dom-children svg)) "100%")))
+                  (when fill
+                    (dom-node 'rect `((width . ,width) (height . "100%") (fill . ,fill)))))))
+      (when-let ((node (pad-rect (reverse (dom-children svg)) "100%")))
+        (dom-add-child-before svg node))
+      (when-let ((node (pad-rect (dom-children svg) (* pad-x 2))))
+        (dom-add-child-before svg node)))
     svg))
 
 (defun edie-widget--face-attribute (faces attribute)
   (declare (edie-log nil))
   (seq-let (face &rest ancestors) (append (ensure-list faces) '(default))
     (if face
-        (face-attribute face attribute nil ancestors)
+        (when-let ((fa (face-attribute face attribute nil ancestors))
+                   ((not (equal fa (face-attribute 'default attribute nil)))))
+            fa)
       (edie-widget--face-attribute ancestors attribute))))
 
 ;; string
@@ -488,7 +499,8 @@ to render the widget."
 
 (defun edie-widget--create-image (svg)
   ""
-  (create-image (edie-widget--stringify svg) 'svg t :scale 1))
+  (create-image (edie-widget--stringify svg) 'svg t :scale 1 :mask
+                (list 'heuristic (color-name-to-rgb (face-attribute 'default :background)))))
 
 (defun edie-widget--insert-image (svg)
   (let* ((marker (point-marker))

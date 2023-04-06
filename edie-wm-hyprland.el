@@ -99,6 +99,11 @@
 
     window))
 
+(defun edie-wm-backend-window-move-desktop (desktop window)
+  (declare (edie-log nil))
+  (edie-wm-hypr--write 'movetoworkspace
+                       (format "%s,address:%s" (edie-wm-id desktop) (edie-wm-id window))))
+
 (defun edie-wm-backend-window-raise (_window)
   (declare (edie-log nil))
   ;; TODO check if _window is the active window
@@ -111,21 +116,26 @@
   (declare (edie-log nil))
   (edie-wm-hypr--write 'focuswindow (format "address:%s"(edie-wm-id window))))
 
-(defun edie-wm-backend-window-update (_ props)
+(defun edie-wm-backend-window-update (window props)
   (declare (edie-log t))
   (cl-assert props t)
 
-  (pcase-let (((map left top width height monitor) props))
+  (pcase-let (((map left top width height desktop monitor) props))
     (when (and left top)
       (cl-assert (and (numberp left) (numberp top)) t)
-      (edie-wm-hypr--write 'moveactive 'exact left top))
+      (edie-wm-hypr--write
+       'movewindowpixel 'exact left top "," (format "address:%s" (edie-wm-id window))))
 
     (when (and width height)
       (cl-assert (and (numberp width) (numberp height)) t)
-      (edie-wm-hypr--write 'resizeactive 'exact width height))
+      (edie-wm-hypr--write 'resizewindowpixel
+                           'exact width height "," (format "address:%s" (edie-wm-id window))))
+
+    (when desktop
+      (edie-wm-hypr--write 'movetoworkspace desktop "," (format "address:%s" (edie-wm-id window))))
 
     (when monitor
-      (edie-wm-hypr--write 'movewindow monitor))))
+      (edie-wm-hypr--write 'movewindow (format "mon:%d" monitor)))))
 
 (defun edie-wm-backend-monitor-focus (monitor)
   (declare (edie-log nil))
@@ -149,7 +159,7 @@
       (push monitor monitors))))
 
 (defun edie-wm-backend-desktop-focus (desktop monitor)
-  (edie-wm-hypr--write 'focusmonitor monitor)
+  ;; (edie-wm-hypr--write 'focusmonitor monitor)
 
   (when (eq desktop 'create)
     (let ((last-desktop (car (reverse (edie-wm-backend-desktop-list)))))
@@ -186,20 +196,27 @@
 (defun edie-wm-hypr--write (&rest args)
   (let ((hyprargs (edie-wm-hypr--ctl (cons 'dispatch args)))
         (buf (get-buffer-create "*edie-wm-hyprland-commands*")))
+    (with-current-buffer buf
+      (insert (car hyprargs) " " (mapconcat #'identity (cdr hyprargs) " ") "\n"))
     (apply #'call-process (car hyprargs) nil buf nil (cdr hyprargs))))
 
 (defun edie-wm-hypr--ctl (args)
-  (declare (edie-log nil))
-  (let ((args (mapcar (lambda (e)
-                        (cond
-                         ((numberp e)
-                          (number-to-string e))
-                         ((symbolp e)
-                          (symbol-name e))
-                         (t
-                          e)))
-                      args)))
-    (cons "hyprctl" args)))
+  (declare (edie-log t))
+  (let ((parsed '())
+        arg)
+    (while args
+      (setq arg (pop args))
+
+      (cond
+       ((numberp arg)
+        (push (number-to-string arg) parsed))
+       ((symbolp arg)
+        (push (symbol-name arg) parsed))
+       ((equal arg ",")
+        (push (concat (pop parsed) "," (pop args)) parsed))
+       (t
+        (push arg parsed))))
+    (cons "hyprctl" (nreverse parsed))))
 
 (defun edie-wm-hypr--socket-path (file)
   (format "/tmp/hypr/%s/.%s.sock" (getenv "HYPRLAND_INSTANCE_SIGNATURE") file))
