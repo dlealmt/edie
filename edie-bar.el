@@ -104,18 +104,6 @@
 (defsubst edie-bar-frame ()
   default-minibuffer-frame)
 
-(defun edie-bar-resize (frame)
-  ""
-  (pcase-let* ((window (minibuffer-window frame))
-               (buffer (window-buffer window))
-               (cur-height (frame-pixel-height frame))
-               (min-height (or (frame-parameter frame 'min-height-px) 0))
-               (`(,_ . ,buf-height) (buffer-text-pixel-size buffer window))
-               (max-height (or (frame-parameter frame 'max-height-px) (max min-height buf-height)))
-               (next-height (thread-first buf-height (max min-height) (min max-height))))
-    (when (/= cur-height next-height)
-      (set-frame-height frame next-height nil t))))
-
 (cl-defmethod edie-widget-render (((_ attributes &rest children) (head bar)))
   ""
   `(box ,attributes ,@children))
