@@ -64,6 +64,7 @@
     (undecorated . t)
     (unsplittable . t)
     (vertical-scroll-bars . nil)
+    (window-system . pgtk)
     (z-group . above)
     (sticky . t))
   "Default settings applied to all edie-bar frames."
