@@ -499,8 +499,8 @@ to render the widget."
 
 (defun edie-widget--create-image (svg)
   ""
-  (create-image (edie-widget--stringify svg) 'svg t :scale 1 :mask
-                (list 'heuristic (color-name-to-rgb (face-attribute 'default :background)))))
+  (create-image (edie-widget--stringify svg) 'svg t :scale 1
+                :mask 'heuristic :ascent 'center))
 
 (defun edie-widget--insert-image (svg)
   (let* ((marker (point-marker))
