@@ -52,21 +52,14 @@
     (internal-border-width . 0)
     (left-fringe . 0)
     (line-spacing . 0)
-    (mode-line . nil)
     (menu-bar-lines . 0)
-    (no-accept-focus . t)
+    (minibuffer . only)
     (right-fringe . 0)
     (scroll-bar-height . 0)
     (scroll-bar-width . 0)
-    (skip-pager . t)
-    (skip-taskbar . t)
     (tool-bar-lines . 0)
-    (undecorated . t)
-    (unsplittable . t)
     (vertical-scroll-bars . nil)
-    (window-system . pgtk)
-    (z-group . above)
-    (sticky . t))
+    (window-system . pgtk))
   "Default settings applied to all edie-bar frames."
   :type '(alist :key-type symbol)
   :group 'edie-bar)
@@ -97,9 +90,25 @@
   "Run the tick hook."
   (run-hooks 'edie-bar-tick-hook))
 
-(defun edie-bar-setup-frame (&optional parameters)
+(cl-defun edie-bar-setup ()
   ""
-  (make-frame (map-merge 'alist parameters edie-bar-default-frame-alist)))
+  (pcase-let* ((frame-alist (append edie-bar-default-frame-alist minibuffer-frame-alist))
+               (frame (make-frame frame-alist))
+               ((map left top) frame-alist)
+               ((map ('width (or `(text-pixels . ,width) width))) frame-alist)
+               ((map ('height (or `(text-pixels . ,height) height))) frame-alist))
+    (setq default-minibuffer-frame frame)
+
+    (add-hook 'edie-wm-mode-hook
+              (lambda ()
+                (when (frame-visible-p frame)
+                  (edie-wm-update-window
+                   (edie-wm-window `((title . ,(frame-parameter frame 'name))))
+                   (edie-wm-geometry `((left . ,(or left 0))
+			               (top . ,(or top 0))
+			               (width . ,(or width 1.0))
+			               (height . ,(or height 48))
+			               (workarea . screen)))))))))
 
 (defsubst edie-bar-frame ()
   default-minibuffer-frame)

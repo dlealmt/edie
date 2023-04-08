@@ -26,11 +26,11 @@
 
 ;;; Code:
 
+(require 'ring)
+
 (eval-when-compile
   (require 'subr-x)
   (require 'map))
-
-(require 'ring)
 
 (defvar edie-wm-window-close-functions nil)
 
@@ -118,10 +118,6 @@ will be applied to windows matched by FILTERS."
                  (alist :key-type (alist :key-type symbol :value-type sexp)
                         :value-type (alist :key-type symbol :value-type sexp))))
 
-(defcustom edie-wm-backend 'hyprland
-  nil
-  :type '(choice (const hyprland)))
-
 (defcustom edie-wm-max-desktops-per-monitor 1024
   "The maximum number of virtual desktops per monitor."
   :type 'natnum)
@@ -140,8 +136,6 @@ will be applied to windows matched by FILTERS."
   :global t
   (if edie-wm-mode
       (progn
-        (require (intern (format "edie-wm-%s" edie-wm-backend)))
-
         (edie-wm-backend-start)
 
         (add-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-focus-history-add)
@@ -159,7 +153,6 @@ will be applied to windows matched by FILTERS."
     (remove-hook 'edie-wm-window-closed-hook #'edie-wm-window-focus-history-remove)
 
     (remove-hook 'edie-wm-window-close-functions #'edie-wm-backend-window-close)
-
     (remove-hook 'edie-wm-window-focus-changed-hook #'edie-wm-window-raise)
     (remove-hook 'edie-wm-window-added-hook #'edie-wm-apply-rules)
     (remove-hook 'edie-wm-window-updated-hook #'edie-wm-apply-rules)

@@ -30,44 +30,18 @@
 
 ;;; Code:
 
-(require 'edie-bar-vertico)
-(require 'edie-debug)
-(require 'edie-keys)
-(require 'edie-redshift)
-(require 'edie-run)
-(require 'edie-wallpaper)
-
 (defgroup edie nil
   "Settings related to Edie and its components."
   :group 'x)
 
-(defcustom edie-after-init-hook nil
-  "Hook run when Emacs' `after-init-hook' runs."
-  :type 'hook
-  :group 'edie)
+(require 'edie-bar)
+(require 'edie-wm-hyprland)
 
-(defcustom edie-startup-hook nil
-  "Hook run when Emacs' `emacs-startup-hook' runs."
-  :type 'hook
-  :group 'edie)
-
-;;;###autoload
-(define-minor-mode edie-mode
-  nil
-  :global t
-  (when edie-mode
-      (progn
-        (add-hook 'after-init-hook #'edie-wallpaper-mode 0)
-        (add-hook 'emacs-startup-hook #'edie-keys-mode 0)
-        (add-hook 'emacs-startup-hook #'edie-redshift-mode 90)
-        (add-hook 'emacs-startup-hook #'edie-run-mode 90)
-        (add-hook 'emacs-startup-hook #'edie-bar-mode 90))))
-
-(defun edie--after-init ()
-  (run-hooks 'edie-after-init-hook))
-
-(defun edie--startup ()
-  (run-hooks 'edie-startup-hook))
+(defun edie-setup ()
+  (add-hook 'before-init-hook
+	    (lambda ()
+	      (edie-bar-setup)
+	      (edie-wm-mode))))
 
 (provide 'edie)
 ;;; edie.el ends here
