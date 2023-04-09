@@ -202,7 +202,7 @@ will be applied to windows matched by FILTERS."
   (1- (+ (edie-wm-property obj 'height) (edie-wm-property obj 'top))))
 
 (defun edie-wm-on-desktop-focus-change (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (run-hooks 'edie-wm-desktop-focus-changed-hook))
 
 (defun edie-wm-desktop-make (properties)
@@ -221,12 +221,14 @@ will be applied to windows matched by FILTERS."
         (id (edie-wm-property monitor 'focused-desktop)))
     (edie-wm-desktop id)))
 
+(defalias 'edie-wm-desktop-current #'edie-wm-current-desktop)
+
 (defun edie-wm-desktop-switch (desktop)
   "Switch to desktop DESKTOP.
 
 When called interactively, prompt for the desktop we want to
 switch to."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when (natnump desktop)
     (setq desktop (edie-wm-desktop desktop)))
   (edie-wm-backend-desktop-focus (edie-wm-property desktop 'id)
@@ -238,7 +240,7 @@ switch to."
 
 When called interactively, prompt for the desktop we want to
 switch to."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when (memq direction '(left-of right-of))
   (let ((desktop (edie-wm-current-desktop)))
     (edie-wm-backend-desktop-focus 'create (edie-wm-property desktop 'monitor))
@@ -287,21 +289,21 @@ switch to."
     (edie-wm-desktop desktop-id)))
 
 (defun edie-wm-on-window-focus (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-focus-changed-hook)))
 
 (defun edie-wm-on-window-add (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-added-hook)))
 
  (defun edie-wm-on-window-remove (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (run-hooks 'edie-wm-window-closed-hook))
 
 (defun edie-wm-on-window-update (_ _)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (edie-wm-with-current-window
     (run-hooks 'edie-wm-window-updated-hook)))
 
@@ -452,6 +454,10 @@ switch to."
   "Return t if OBJECT is a window."
   (eq 'window (car-safe object)))
 
+(defun edie-wm-window-hide ()
+  (interactive)
+  (edie-wm-window-update (edie-wm-window-current) '((hide . t))))
+
 (defun edie-wm-focus-window (window)
   "Focus WINDOW."
   (declare (edie-log nil))
@@ -483,7 +489,7 @@ switch to."
         (throw 'focused thing)))))
 
 (defun edie-wm-focus-direction-try-window (direction)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (let* ((desktop (edie-wm-current-desktop))
          (window (edie-wm-current-window)))
     (when-let ((window)
@@ -493,16 +499,16 @@ switch to."
       (edie-wm-window-focus new))))
 
 (defun edie-wm-focus-direction-try-desktop (direction)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when-let ((new (edie-wm-desktop-in-direction direction)))
     (edie-wm-desktop-switch new)))
 
 (defun edie-wm-focus-direction-try-desktop-create (direction)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (edie-wm-desktop-create-switch direction))
 
 (defun edie-wm-focus-direction-try-monitor (direction)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when-let ((new (edie-wm-monitor-in-direction direction)))
     (edie-wm-monitor-focus new)))
 
@@ -546,12 +552,12 @@ switch to."
 
 (defun edie-wm-window-raise (&optional window)
   "Raise WINDOW."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (edie-wm-backend-window-raise window))
 
 (defun edie-wm-window-close (&optional window)
   "Close the active window or WINDOW."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (interactive)
   (when-let ((window (or window (edie-wm-current-window))))
     (run-hook-with-args-until-success 'edie-wm-window-close-functions window)))
@@ -565,7 +571,7 @@ switch to."
 
 (defun edie-wm-window-move-to-monitor (monitor &optional window)
   "Move WINDOW to MONITOR."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (let ((window (or window (edie-wm-current-window))))
     (edie-wm-update-window window `((monitor . ,(edie-wm-id monitor))))))
 
@@ -640,9 +646,11 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-update-window (window alist)
   ""
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when-let ((changes (edie-wm-window-merge-changes window alist)))
     (edie-wm-backend-window-update window changes)))
+
+(defalias 'edie-wm-window-update #'edie-wm-update-window)
 
 (defun edie-wm-window-merge-changes (window alist)
   (declare (edie-log nil))
@@ -665,14 +673,9 @@ Return nil or the list of windows that match the filters."
          (setf (alist-get (car elt) changes) val)
          (unless (alist-get 'width changes)
            (setf (alist-get 'width changes) (edie-wm-property window 'width))))
-        ((and `(class . ,val) (guard (not (equal val (edie-wm-property window 'class)))))
-         (setf (alist-get (car elt) changes) val))
-        ((and `(instance . ,val) (guard (not (equal val (edie-wm-property window 'instance)))))
-         (setf (alist-get (car elt) changes) val))
-        ((and `(desktop . ,val) (guard (not (equal val (edie-wm-property window 'desktop)))))
-         (setf (alist-get (car elt) changes) val))
-        ((and `(title . ,val) (guard (not (equal val (edie-wm-property window 'title)))))
-         (setf (alist-get (car elt) changes) val))))
+        (`(,key . ,val)
+         (when (not (equal val (edie-wm-property window key)))
+           (setf (alist-get key changes) val)))))
     changes))
 
 (defun edie-wm-monitor-make ()
@@ -724,15 +727,15 @@ Return nil or the list of windows that match the filters."
   (edie-wm-left-of-p reference target allow-overlap))
 
 (defun edie-wm-on-monitor-add (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (run-hooks 'edie-wm-monitor-added-hook))
 
 (defun edie-wm-on-monitor-focus-change (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (run-hooks 'edie-wm-monitor-focus-changed-hook))
 
 (defun edie-wm-on-monitor-remove (_)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (run-hooks 'edie-wm-monitor-removed-hook))
 
 (defun edie-wm-workarea ()
@@ -808,7 +811,7 @@ Return nil or the list of windows that match the filters."
         alist))))
 
 (defun edie-wm-apply-rules ()
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when-let ((window (edie-wm-current-window)))
     (let* ((new-props nil)
            (rules (cdr (edie-wm-window-find-rule window)))
@@ -846,7 +849,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-maybe-tile (rules window)
   "Tile WINDOW if it matches RULES."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (let* ((elt (assq 'tile rules))
          (tiles (ensure-list (cdr elt)))
          (desktop (edie-wm-current-desktop))
@@ -871,7 +874,7 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-window-tile (&optional window)
   "Return the tile that WINDOW is in."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (pcase-let* ((window (or window (edie-wm-current-window)))
                ((map left top width height) (edie-wm-properties window)))
     (car-safe (seq-find
@@ -881,14 +884,14 @@ Return nil or the list of windows that match the filters."
 
 (defun edie-wm-tile-window-list (desktop tile)
   "Return a list of windows in tile TILE of DESKTOP."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (let ((desktop-id (edie-wm-property desktop 'id))
         (geom (edie-wm-geometry (edie-wm-tile--spec tile))))
     (edie-wm-window-filter-list `((desktop . ,desktop-id) ,@geom))))
 
 (defun edie-wm-tile-fit (tile &optional window)
   "Fit WINDOW to TILE's dimensions."
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (when-let ((w (or window (edie-wm-current-window))))
     (edie-wm-update-window w (edie-wm-geometry (edie-wm-tile--spec tile)))))
 

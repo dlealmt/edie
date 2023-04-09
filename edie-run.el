@@ -47,10 +47,35 @@
   :group 'edie
   (if edie-run-mode
       (progn
-        (add-hook 'edie-wm-window-close-functions #'edie-run-window-close))
-    (when (frame-live-p edie-run--driver-frame)
-      (delete-frame edie-run--driver-frame))
+        (add-hook 'edie-wm-window-added-hook #'edie-run-try-advise-command -90)
+        (add-hook 'edie-wm-window-updated-hook #'edie-run-try-advise-command -90)
+        (add-hook 'edie-wm-window-focus-changed-hook #'edie-run-try-advise-command -90)
+        (add-hook 'edie-wm-window-close-functions #'edie-run-window-close -90))
+    (remove-hook 'edie-wm-window-added-hook #'edie-run-try-advise-command)
+    (remove-hook 'edie-wm-window-updated-hook #'edie-run-try-advise-command)
+    (remove-hook 'edie-wm-window-focus-changed-hook #'edie-run-try-advise-command)
     (remove-hook 'edie-wm-window-close-functions #'edie-run-window-close)))
+
+(defun edie-run-try-advise-command ()
+  (declare (edie-log nil))
+  (pcase (edie-wm-window-find-rule (edie-wm-current-window))
+    (`(,filters . ,(map ('single-instance (and command (pred commandp)))))
+     (edie-debug 'advising-command command)
+     (let ((advisor (intern (format "edie-run-advisor--%s" command))))
+       (advice-remove command advisor)
+       (advice-add command
+                   :before-until
+                   (lambda (&rest _) (edie-run-try-bring-window filters))
+                   `((name . ,advisor)))))))
+
+(defun edie-run-try-bring-window (filters)
+  (when-let (window (edie-wm-window filters))
+    (edie-wm-window-move-to-desktop (edie-wm-desktop-current) window)
+    (edie-wm-focus-window window)))
+
+(defun edie-run-window-single-instance-p (window)
+  (let ((rule (edie-wm-window-find-rule window)))
+    (map-elt (cdr rule) 'single-instance)))
 
 (defvar-keymap edie-run-frame-mode-map
  :doc "Keymap for `edie-run-frame-mode'."
@@ -108,17 +133,6 @@
              (when ,prev-window
                (edie-wm-focus-window ,prev-window))))))))
 
-(defun edie-run-once (filters command &rest command-args)
-  ""
-  (declare (edie-log nil))
-  (cl-pushnew filters edie-run-filter-list :test #'equal)
-
-  (if-let ((window (edie-wm-window filters)))
-      (edie-wm-update-window window `((hidden . nil)
-                                      (focus . t)
-                                      (desktop . ,(edie-wm-property (edie-wm-current-desktop) 'id))))
-    (apply command command-args)))
-
 (defun edie-run-menu ()
   (interactive)
   (edie-run-with-global-context
@@ -148,10 +162,10 @@
       buffer))
 
 (defun edie-run-window-close (window)
-  (when (seq-find (lambda (filter)
-                    (edie-wm-window-filter-match-p filter window))
-                  edie-run-filter-list)
-    (prog1 t (edie-wm-update-window window `(:hidden t)))))
+  (declare (edie-log t))
+  (when-let ((rule (edie-wm-window-find-rule window))
+             ((map-elt (cdr rule) 'single-instance)))
+    (prog1 t (edie-wm-update-window window `((hidden t))))))
 
 (provide 'edie-run)
 ;;; edie-run.el ends here

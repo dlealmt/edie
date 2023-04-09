@@ -31,7 +31,7 @@
 (require 'edie-wm)
 
 (defvar edie-wm-hypr--conn-events nil)
-(defvar edie-wm-hypr--current-window-id nil)
+(defvar edie-wm-hypr--hidden-desktop-id 99999)
 
 (defun edie-wm-backend-start ()
   (setq edie-wm-hypr--conn-events (make-network-process
@@ -110,6 +110,7 @@
   (edie-wm-hypr--write 'bringactivetotop))
 
 (defun edie-wm-backend-window-close (window)
+  (declare (edie-log nil))
   (edie-wm-hypr--write 'closewindow (format "address:%s" (edie-wm-property window 'address))))
 
 (defun edie-wm-backend-window-focus (window)
@@ -117,10 +118,10 @@
   (edie-wm-hypr--write 'focuswindow (format "address:%s"(edie-wm-id window))))
 
 (defun edie-wm-backend-window-update (window props)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (cl-assert props t)
 
-  (pcase-let (((map left top width height desktop monitor) props))
+  (pcase-let (((map left top width height desktop monitor hidden) props))
     (when (and left top)
       (cl-assert (and (numberp left) (numberp top)) t)
       (edie-wm-hypr--write
@@ -133,6 +134,11 @@
 
     (when desktop
       (edie-wm-hypr--write 'movetoworkspace desktop "," (format "address:%s" (edie-wm-id window))))
+
+    (when hidden
+      (edie-wm-hypr--write 'movetoworkspacesilent
+                           edie-wm-hypr--hidden-desktop-id ","
+                           (format "address:%s" (edie-wm-id window))))
 
     (when monitor
       (edie-wm-hypr--write 'movewindow (format "mon:%d" monitor)))))
@@ -169,15 +175,17 @@
 
 (defun edie-wm-backend-desktop-list ()
   (let ((monitors (edie-wm-backend-monitor-list))
-        (workspaces (edie-wm-hypr--read-json 'workspaces)))
-    (mapcar (lambda (ws)
-              (let* ((dsk (edie-wm-desktop-make ws))
-                     (mon (seq-find (lambda (m)
-                                      (equal (edie-wm-property m 'name)
-                                             (edie-wm-property dsk 'monitor)))
-                                    monitors)))
-                (edie-wm-set-property dsk 'monitor (edie-wm-property mon 'id))))
-            workspaces)))
+        (workspaces (edie-wm-hypr--read-json 'workspaces))
+        (desktops '()))
+    (dolist (ws workspaces desktops)
+      (when (not (= (alist-get 'id ws) edie-wm-hypr--hidden-desktop-id))
+        (let* ((dsk (edie-wm-desktop-make ws))
+               (mon (seq-find (lambda (m)
+                                (equal (edie-wm-property m 'name)
+                                       (edie-wm-property dsk 'monitor)))
+                              monitors)))
+          (edie-wm-set-property dsk 'monitor (edie-wm-property mon 'id))
+          (push dsk desktops))))))
 
 (defun edie-wm-hypr--read (&rest args)
   (with-output-to-string
@@ -201,7 +209,7 @@
     (apply #'call-process (car hyprargs) nil buf nil (cdr hyprargs))))
 
 (defun edie-wm-hypr--ctl (args)
-  (declare (edie-log t))
+  (declare (edie-log nil))
   (let ((parsed '())
         arg)
     (while args
