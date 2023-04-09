@@ -636,7 +636,7 @@ Return nil or the list of windows that match the filters."
          (or (not above) (edie-wm-above-p window above t))
          (or (not below) (edie-wm-below-p window below t))
          (or (not can-focus)
-             (not (map-elt (edie-wm-window-find-rule window) 'skip-focus-list))))))
+             (not (map-elt (cdr (edie-wm-window-find-rule window)) 'skip-focus-list))))))
 
 (defun edie-wm-update-window (window alist)
   ""
@@ -811,7 +811,7 @@ Return nil or the list of windows that match the filters."
   (declare (edie-log t))
   (when-let ((window (edie-wm-current-window)))
     (let* ((new-props nil)
-           (rules (edie-wm-window-find-rule window))
+           (rules (cdr (edie-wm-window-find-rule window)))
            result)
       (dolist (fun edie-wm-window-rules-functions)
         (setq result (funcall fun rules window))
@@ -822,9 +822,9 @@ Return nil or the list of windows that match the filters."
         (edie-wm-update-window window new-props)))))
 
 (defun edie-wm-window-find-rule (window)
-  (cdr (seq-find (pcase-lambda (`(,filter . ,_))
-                   (edie-wm-window-filter-match-p filter window))
-                 edie-wm-rules-alist)) )
+  (seq-find (pcase-lambda (`(,filter . ,_))
+              (edie-wm-window-filter-match-p filter window))
+            edie-wm-rules-alist) )
 
 (defun edie-wm-tile--gen-commands (tiles)
   (dolist (tile tiles)
