@@ -1,5 +1,7 @@
 #+TITLE: Edie
 
+*No longer under development, as I switched to Neovim. ¯\_(ツ)_/¯*
+
 /An Emacs-based desktop environment./
 
 [[./current.png]]
